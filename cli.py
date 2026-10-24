@@ -53,6 +53,7 @@ def main():
     parser.add_argument("--purge-fonts", action="store_true", help="Purge corrupted Adobe font caches (AdobeFnt*.lst)")
     parser.add_argument("--reset-prefs", action="store_true", help="Reset preferences & plugin cache only")
     parser.add_argument("--versions", action="store_true", help="Display version analysis & rollback recommendations")
+    parser.add_argument("--fix-freeze-premiere", "--anti-freeze", action="store_true", help="Fix Premiere Pro timeline freeze & GPU TDR timeout deadlock")
 
     args = parser.parse_args()
     logger = DoctorLogger()
@@ -66,6 +67,13 @@ def main():
     inspector = SystemInspector(logger)
 
     print(BANNER)
+
+    if args.fix_freeze_premiere:
+        print("\n[*] Executing Surgical Premiere Pro Anti-Freeze & Timeline Engine...")
+        apps = diag.find_all_installations()
+        res = u_repair.fix_premiere_pro_freeze(apps)
+        logger.success("Premiere Pro Anti-Freeze protocol complete!")
+        return
 
     if args.custom_fix:
         print("\n[*] Running Customizable 1-Click Repair Suite...")

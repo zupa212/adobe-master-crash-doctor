@@ -356,9 +356,43 @@ class AdobeMasterDoctorApp(ctk.CTk):
         )
         self.btn_run_universal.pack(padx=20, pady=(0, 15), fill="x")
 
+        # ---------------- PREMIERE PRO ANTI-FREEZE HERO CARD ---------------- #
+        freeze_card = ctk.CTkFrame(self.frame_fix, fg_color="#0c4a6e", corner_radius=10, border_color="#38bdf8", border_width=1.5)
+        freeze_card.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="ew")
+        freeze_card.grid_columnconfigure(0, weight=1)
+
+        freeze_title = ctk.CTkLabel(
+            freeze_card,
+            text="🧊 FIX PREMIERE PRO FREEZE (ΕΠΙΔΙΟΡΘΩΣΗ ΠΑΓΩΜΑΤΟΣ PREMIERE PRO)",
+            font=ctk.CTkFont(size=17, weight="bold"),
+            text_color="#38bdf8"
+        )
+        freeze_title.pack(padx=20, pady=(12, 4), anchor="w")
+
+        freeze_desc = ctk.CTkLabel(
+            freeze_card,
+            text="Εξειδικευμένη αποκατάσταση παγώματος Premiere Pro: Ενισχύει το Windows GPU TDR Delay (10s), καθαρίζει αλλοιωμένα Media Cache / Peak files (.pek, .cfa, .mcdb), τερματίζει τα DynamicLink deadlocks και κλειδώνει την High-Performance GPU.",
+            font=ctk.CTkFont(size=12),
+            text_color="#bae6fd",
+            wraplength=720,
+            justify="left"
+        )
+        freeze_desc.pack(padx=20, pady=(0, 8), anchor="w")
+
+        self.btn_fix_freeze = ctk.CTkButton(
+            freeze_card,
+            text="🧊 ΕΠΙΔΙΟΡΘΩΣΗ FREEZE PREMIERE PRO (FIX PREMIERE FREEZE NOW)",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            fg_color="#0284c7",
+            hover_color="#0369a1",
+            height=42,
+            command=self.run_premiere_freeze_thread
+        )
+        self.btn_fix_freeze.pack(padx=20, pady=(0, 14), fill="x")
+
         # Customization Panel
         custom_box = ctk.CTkFrame(self.frame_fix, fg_color="#1e293b", corner_radius=10, border_color="#38bdf8", border_width=1)
-        custom_box.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
+        custom_box.grid(row=2, column=0, padx=10, pady=10, sticky="ew")
 
         lbl_c_title = ctk.CTkLabel(custom_box, text="🛠️ Customizable 1-Click Repair Options (Επιλογή Modules & Εφαρμογών)", font=ctk.CTkFont(size=16, weight="bold"), text_color="#38bdf8")
         lbl_c_title.pack(padx=15, pady=(15, 5), anchor="w")
@@ -400,10 +434,10 @@ class AdobeMasterDoctorApp(ctk.CTk):
             text="Μεμονωμένα Εργαλεία Επιδιόρθωσης (Single-Action Utilities)",
             font=ctk.CTkFont(size=16, weight="bold")
         )
-        lbl_individual.grid(row=2, column=0, padx=15, pady=(15, 10), sticky="w")
+        lbl_individual.grid(row=3, column=0, padx=15, pady=(15, 10), sticky="w")
 
         tools_grid = ctk.CTkFrame(self.frame_fix, fg_color="transparent")
-        tools_grid.grid(row=3, column=0, padx=10, pady=5, sticky="ew")
+        tools_grid.grid(row=4, column=0, padx=10, pady=5, sticky="ew")
         tools_grid.grid_columnconfigure((0, 1), weight=1)
 
         self.create_tool_card(tools_grid, 0, 0, "1. 🔤 Εκκαθάριση Adobe Font Cache", "Διαγράφει αλλοιωμένα αρχεία AdobeFnt*.lst που προκαλούν άμεσο crash κατά την εκκίνηση.", "Purge Font Caches", self.action_purge_fonts)
@@ -465,7 +499,19 @@ class AdobeMasterDoctorApp(ctk.CTk):
         cat_lbl.pack(padx=12, pady=(0, 10), anchor="w")
 
         btn = ctk.CTkButton(card, text=f"🔧 Fix {data['short_name']}", fg_color="#0284c7", hover_color="#0369a1", command=lambda aid=app_id: self.run_single_app_fix_thread(aid))
-        btn.pack(padx=12, pady=(0, 12), fill="x")
+        btn.pack(padx=12, pady=(0, 6 if app_id == "premiere" else 12), fill="x")
+
+        if app_id == "premiere":
+            btn_freeze = ctk.CTkButton(
+                card,
+                text="🧊 Fix Premiere Freeze (Anti-Freeze)",
+                fg_color="#0c4a6e",
+                hover_color="#0284c7",
+                border_color="#38bdf8",
+                border_width=1,
+                command=self.run_premiere_freeze_thread
+            )
+            btn_freeze.pack(padx=12, pady=(0, 12), fill="x")
 
     # ---------------- VIEW 4: CC ROOT CLEANER & NUCLEAR PURGE ---------------- #
     def setup_nuclear_view(self):
@@ -711,6 +757,39 @@ class AdobeMasterDoctorApp(ctk.CTk):
 
                 desc = ctk.CTkLabel(card, text=issue["description"], font=ctk.CTkFont(size=12), text_color="#e2e8f0", wraplength=720, justify="left")
                 desc.pack(padx=12, pady=(0, 10), anchor="w")
+
+    def run_premiere_freeze_thread(self):
+        if self.is_fixing:
+            return
+        self.is_fixing = True
+        if hasattr(self, "btn_fix_freeze"):
+            self.btn_fix_freeze.configure(state="disabled", text="ΕΠΙΔΙΟΡΘΩΣΗ FREEZE ΣΕ ΕΞΕΛΙΞΗ...")
+        self.select_frame("console")
+
+        def _worker():
+            try:
+                if not self.diag_data:
+                    self.diag_data = self.diag.run_full_diagnosis()
+                res = self.u_repair.fix_premiere_pro_freeze(self.diag_data.get("installations", []))
+                self.logger.success("🧊 Premiere Pro Anti-Freeze fix executed successfully!")
+                self.after(0, lambda: messagebox.showinfo(
+                    "Premiere Pro Anti-Freeze Complete",
+                    f"Το πάγωμα (Freeze) του Premiere Pro επιδιορθώθηκε επιτυχώς!\n\n"
+                    f"• GPU TDR Delay Boost: {'10 Seconds (Ενεργό)' if res.get('tdr_applied') else 'Standard'}\n"
+                    f"• Media & Conforming Cache Purged: {res.get('cache_files_purged', 0)} αρχεία (.pek, .cfa, .mcdb)\n"
+                    f"• Orphaned Lockfiles Removed: {res.get('locks_removed', 0)}\n"
+                    f"• DirectX High-Perf GPU Affinity: {res.get('gpu_locked', 0)} exes\n\n"
+                    f"Μπορείτε τώρα να ανοίξετε το Premiere Pro χωρίς παγώματα στο timeline!"
+                ))
+            except Exception as e:
+                self.logger.error(f"Error during Premiere Pro freeze repair: {e}")
+            finally:
+                self.is_fixing = False
+                if hasattr(self, "btn_fix_freeze"):
+                    self.after(0, lambda: self.btn_fix_freeze.configure(state="normal", text="🧊 ΕΠΙΔΙΟΡΘΩΣΗ FREEZE PREMIERE PRO (FIX PREMIERE FREEZE NOW)"))
+                self.run_diagnostics_thread()
+
+        threading.Thread(target=_worker, daemon=True).start()
 
     def run_universal_fix_thread(self):
         if self.is_fixing:

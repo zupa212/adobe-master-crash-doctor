@@ -94,6 +94,16 @@ def ensure_repaired_launch():
     except Exception:
         pass
 
+    # Enforce Windows GPU TDR Delay Boost (Anti-Freeze: 10 seconds timeout instead of 2 seconds)
+    try:
+        tdr_key = r"SYSTEM\CurrentControlSet\Control\GraphicsDrivers"
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, tdr_key, 0, winreg.KEY_SET_VALUE) as key:
+            winreg.SetValueEx(key, "TdrDelay", 0, winreg.REG_DWORD, 10)
+            winreg.SetValueEx(key, "TdrDdiDelay", 0, winreg.REG_DWORD, 10)
+            winreg.SetValueEx(key, "TdrLevel", 0, winreg.REG_DWORD, 3)
+    except Exception:
+        pass
+
     # Launch Premiere Pro in clean detached mode
     work_dir = os.path.dirname(final_exe)
     subprocess.Popen(
