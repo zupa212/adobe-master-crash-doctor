@@ -552,7 +552,18 @@ class AdobeMasterDoctorApp(ctk.CTk):
                 border_width=1,
                 command=self.run_premiere_freeze_thread
             )
-            btn_freeze.pack(padx=12, pady=(0, 12), fill="x")
+            btn_freeze.pack(padx=12, pady=(0, 6), fill="x")
+
+            btn_runtime = ctk.CTkButton(
+                card,
+                text="🛡️ Fix RuntimeInstaller.dll (0xc0000005)",
+                fg_color="#334155",
+                hover_color="#475569",
+                border_color="#94a3b8",
+                border_width=1,
+                command=self.run_runtime_installer_fix_thread
+            )
+            btn_runtime.pack(padx=12, pady=(0, 12), fill="x")
 
     # ---------------- VIEW 4: CC ROOT CLEANER & NUCLEAR PURGE ---------------- #
     def setup_nuclear_view(self):
@@ -834,6 +845,37 @@ class AdobeMasterDoctorApp(ctk.CTk):
                     self.after(0, lambda: self.btn_fix_freeze.configure(state="normal", text="🧊 ΕΠΙΔΙΟΡΘΩΣΗ FREEZE PREMIERE PRO (FIX 2-MIN TIMEOUT & AUDIO/GPU NOW)"))
                 if hasattr(self, "btn_side_freeze"):
                     self.after(0, lambda: self.btn_side_freeze.configure(state="normal", text="🧊 FIX PREMIERE FREEZE"))
+                self.run_diagnostics_thread()
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def run_runtime_installer_fix_thread(self):
+        if self.is_fixing:
+            return
+        self.is_fixing = True
+        self.select_frame("console")
+
+        def _worker():
+            try:
+                if not self.diag_data:
+                    self.diag_data = self.diag.run_full_diagnosis()
+                apps = self.diag_data.get("installations", [])
+                exes = [a["exe_path"] for a in apps if a.get("exists") and a.get("exe_path")]
+                res = self.u_repair.fix_runtime_installer_crash(exes)
+                self.logger.success("🛡️ RuntimeInstaller.dll (0xc0000005) fix executed successfully!")
+                self.after(0, lambda: messagebox.showinfo(
+                    "RuntimeInstaller Fix Complete",
+                    f"Η επιδιόρθωση του RuntimeInstaller.dll (0xc0000005) ολοκληρώθηκε!\n\n"
+                    f"• Καθαρισμός corrupt SLStore/SLCache/OOBE: {res.get('cleared_dirs', 0)} βάσεις δεδομένων\n"
+                    f"• Επαναφορά δικαιωμάτων NTFS (Full Control) στα runtime dirs\n"
+                    f"• Έλεγχος Visual C++ 2015-2022 runtimes\n"
+                    f"• DirectX High-Perf GPU Affinity & Firewall Loopback rules\n\n"
+                    f"Μπορείτε τώρα να εκκινήσετε το Premiere Pro!"
+                ))
+            except Exception as e:
+                self.logger.error(f"Error fixing RuntimeInstaller.dll: {e}")
+            finally:
+                self.is_fixing = False
                 self.run_diagnostics_thread()
 
         threading.Thread(target=_worker, daemon=True).start()

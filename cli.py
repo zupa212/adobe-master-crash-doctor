@@ -54,6 +54,7 @@ def main():
     parser.add_argument("--reset-prefs", action="store_true", help="Reset preferences & plugin cache only")
     parser.add_argument("--versions", action="store_true", help="Display version analysis & rollback recommendations")
     parser.add_argument("--fix-freeze-premiere", "--anti-freeze", action="store_true", help="Fix Premiere Pro timeline freeze & GPU TDR timeout deadlock")
+    parser.add_argument("--fix-runtime-installer", action="store_true", help="Fix RuntimeInstaller.dll APPCRASH (0xc0000005 Access Violation)")
 
     args = parser.parse_args()
     logger = DoctorLogger()
@@ -67,6 +68,14 @@ def main():
     inspector = SystemInspector(logger)
 
     print(BANNER)
+
+    if args.fix_runtime_installer:
+        print("\n[*] Executing RuntimeInstaller.DLL 0xc0000005 Repair Engine...")
+        apps = diag.find_all_installations()
+        exes = [a["exe_path"] for a in apps if a.get("exists") and a.get("exe_path")]
+        res = u_repair.fix_runtime_installer_crash(exes)
+        logger.success("RuntimeInstaller.DLL repair protocol complete!")
+        return
 
     if args.fix_freeze_premiere:
         print("\n[*] Executing Surgical Premiere Pro Anti-Freeze & Timeline Engine...")
