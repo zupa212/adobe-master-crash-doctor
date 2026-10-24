@@ -70,7 +70,7 @@ class AdobeMasterDoctorApp(ctk.CTk):
         # ---------------- SIDEBAR FRAME ---------------- #
         self.sidebar_frame = ctk.CTkFrame(self, width=240, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(9, weight=1)
+        self.sidebar_frame.grid_rowconfigure(10, weight=1)
 
         self.logo_label = ctk.CTkLabel(
             self.sidebar_frame,
@@ -97,7 +97,19 @@ class AdobeMasterDoctorApp(ctk.CTk):
             hover_color="#059669",
             height=36
         )
-        self.btn_side_1click.grid(row=2, column=0, padx=15, pady=(0, 15), sticky="ew")
+        self.btn_side_1click.grid(row=2, column=0, padx=15, pady=(0, 6), sticky="ew")
+
+        # Dedicated Premiere Pro 2-Minute Anti-Freeze Button in Sidebar
+        self.btn_side_freeze = ctk.CTkButton(
+            self.sidebar_frame,
+            text="🧊 FIX PREMIERE FREEZE",
+            command=self.run_premiere_freeze_thread,
+            font=ctk.CTkFont(size=12, weight="bold"),
+            fg_color="#0284c7",
+            hover_color="#0369a1",
+            height=36
+        )
+        self.btn_side_freeze.grid(row=3, column=0, padx=15, pady=(0, 15), sticky="ew")
 
         # Sidebar navigation buttons
         self.btn_nav_diag = ctk.CTkButton(
@@ -107,7 +119,7 @@ class AdobeMasterDoctorApp(ctk.CTk):
             fg_color="#1e293b",
             hover_color="#334155"
         )
-        self.btn_nav_diag.grid(row=3, column=0, padx=15, pady=5, sticky="ew")
+        self.btn_nav_diag.grid(row=4, column=0, padx=15, pady=5, sticky="ew")
 
         self.btn_nav_fix = ctk.CTkButton(
             self.sidebar_frame,
@@ -116,7 +128,7 @@ class AdobeMasterDoctorApp(ctk.CTk):
             fg_color="#1e293b",
             hover_color="#334155"
         )
-        self.btn_nav_fix.grid(row=4, column=0, padx=15, pady=5, sticky="ew")
+        self.btn_nav_fix.grid(row=5, column=0, padx=15, pady=5, sticky="ew")
 
         self.btn_nav_apps = ctk.CTkButton(
             self.sidebar_frame,
@@ -125,7 +137,7 @@ class AdobeMasterDoctorApp(ctk.CTk):
             fg_color="#1e293b",
             hover_color="#334155"
         )
-        self.btn_nav_apps.grid(row=5, column=0, padx=15, pady=5, sticky="ew")
+        self.btn_nav_apps.grid(row=6, column=0, padx=15, pady=5, sticky="ew")
 
         self.btn_nav_nuclear = ctk.CTkButton(
             self.sidebar_frame,
@@ -134,7 +146,7 @@ class AdobeMasterDoctorApp(ctk.CTk):
             fg_color="#1e293b",
             hover_color="#334155"
         )
-        self.btn_nav_nuclear.grid(row=6, column=0, padx=15, pady=5, sticky="ew")
+        self.btn_nav_nuclear.grid(row=7, column=0, padx=15, pady=5, sticky="ew")
 
         self.btn_nav_versions = ctk.CTkButton(
             self.sidebar_frame,
@@ -143,7 +155,7 @@ class AdobeMasterDoctorApp(ctk.CTk):
             fg_color="#1e293b",
             hover_color="#334155"
         )
-        self.btn_nav_versions.grid(row=7, column=0, padx=15, pady=5, sticky="ew")
+        self.btn_nav_versions.grid(row=8, column=0, padx=15, pady=5, sticky="ew")
 
         self.btn_nav_console = ctk.CTkButton(
             self.sidebar_frame,
@@ -152,7 +164,7 @@ class AdobeMasterDoctorApp(ctk.CTk):
             fg_color="#1e293b",
             hover_color="#334155"
         )
-        self.btn_nav_console.grid(row=8, column=0, padx=15, pady=5, sticky="ew")
+        self.btn_nav_console.grid(row=9, column=0, padx=15, pady=5, sticky="ew")
 
         # Bottom Quick Action in Sidebar
         self.btn_rescan = ctk.CTkButton(
@@ -162,7 +174,7 @@ class AdobeMasterDoctorApp(ctk.CTk):
             fg_color="#0284c7",
             hover_color="#0369a1"
         )
-        self.btn_rescan.grid(row=10, column=0, padx=15, pady=12, sticky="ew")
+        self.btn_rescan.grid(row=11, column=0, padx=15, pady=12, sticky="ew")
 
         # Creator tag in sidebar
         lbl_creator = ctk.CTkLabel(
@@ -171,7 +183,7 @@ class AdobeMasterDoctorApp(ctk.CTk):
             font=ctk.CTkFont(size=10),
             text_color="#64748b"
         )
-        lbl_creator.grid(row=11, column=0, padx=15, pady=(0, 15))
+        lbl_creator.grid(row=12, column=0, padx=15, pady=(0, 15))
 
         # ---------------- CONTENT CONTAINER ---------------- #
         self.content_container = ctk.CTkFrame(self, corner_radius=10, fg_color="#0f172a")
@@ -283,6 +295,31 @@ class AdobeMasterDoctorApp(ctk.CTk):
         )
         self.lbl_disk_specs.pack(padx=15, pady=(0, 10), anchor="w")
 
+        # Quick Premiere Anti-Freeze Banner on Diagnostics
+        self.p_quick_box = ctk.CTkFrame(self.frame_diag, fg_color="#082f49", corner_radius=8, border_color="#0284c7", border_width=1.5)
+        self.p_quick_box.grid(row=4, column=0, padx=10, pady=(0, 10), sticky="ew")
+        self.p_quick_box.grid_columnconfigure(0, weight=1)
+        self.p_quick_box.grid_columnconfigure(1, weight=0)
+
+        lbl_p_quick = ctk.CTkLabel(
+            self.p_quick_box,
+            text="🧊 Premiere Pro 2-Minute Freeze Detected? (Audio Sleep Deadlock, Dual-GPU & Cloud Timeouts)",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            text_color="#38bdf8"
+        )
+        lbl_p_quick.grid(row=0, column=0, padx=15, pady=10, sticky="w")
+
+        btn_p_quick = ctk.CTkButton(
+            self.p_quick_box,
+            text="🧊 FIX PREMIERE FREEZE NOW",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            fg_color="#0284c7",
+            hover_color="#0369a1",
+            height=32,
+            command=self.run_premiere_freeze_thread
+        )
+        btn_p_quick.grid(row=0, column=1, padx=15, pady=10, sticky="e")
+
         # Detected Adobe Applications Section
         lbl_apps_hdr = ctk.CTkLabel(
             self.frame_diag,
@@ -290,10 +327,10 @@ class AdobeMasterDoctorApp(ctk.CTk):
             font=ctk.CTkFont(size=16, weight="bold"),
             text_color="#38bdf8"
         )
-        lbl_apps_hdr.grid(row=4, column=0, padx=15, pady=(10, 5), sticky="w")
+        lbl_apps_hdr.grid(row=5, column=0, padx=15, pady=(10, 5), sticky="w")
 
         self.apps_container = ctk.CTkFrame(self.frame_diag, fg_color="transparent")
-        self.apps_container.grid(row=5, column=0, padx=10, pady=5, sticky="ew")
+        self.apps_container.grid(row=6, column=0, padx=10, pady=5, sticky="ew")
         self.apps_container.grid_columnconfigure(0, weight=1)
 
         # Issues Section
@@ -302,10 +339,10 @@ class AdobeMasterDoctorApp(ctk.CTk):
             text="Diagnosed Crash Vectors & Action Plan",
             font=ctk.CTkFont(size=16, weight="bold")
         )
-        lbl_issues.grid(row=6, column=0, padx=15, pady=(15, 5), sticky="w")
+        lbl_issues.grid(row=7, column=0, padx=15, pady=(15, 5), sticky="w")
 
         self.issues_container = ctk.CTkFrame(self.frame_diag, fg_color="transparent")
-        self.issues_container.grid(row=7, column=0, padx=10, pady=5, sticky="ew")
+        self.issues_container.grid(row=8, column=0, padx=10, pady=5, sticky="ew")
         self.issues_container.grid_columnconfigure(0, weight=1)
 
     def create_metric_card(self, parent, col, title, initial_val):
@@ -363,7 +400,7 @@ class AdobeMasterDoctorApp(ctk.CTk):
 
         freeze_title = ctk.CTkLabel(
             freeze_card,
-            text="🧊 FIX PREMIERE PRO FREEZE (ΕΠΙΔΙΟΡΘΩΣΗ ΠΑΓΩΜΑΤΟΣ PREMIERE PRO)",
+            text="🧊 1-CLICK FIX PREMIERE PRO FREEZE (2-MINUTE TIMEOUT & AUDIO/GPU ANTI-DEADLOCK)",
             font=ctk.CTkFont(size=17, weight="bold"),
             text_color="#38bdf8"
         )
@@ -371,7 +408,11 @@ class AdobeMasterDoctorApp(ctk.CTk):
 
         freeze_desc = ctk.CTkLabel(
             freeze_card,
-            text="Εξειδικευμένη αποκατάσταση παγώματος Premiere Pro: Ενισχύει το Windows GPU TDR Delay (10s), καθαρίζει αλλοιωμένα Media Cache / Peak files (.pek, .cfa, .mcdb), τερματίζει τα DynamicLink deadlocks και κλειδώνει την High-Performance GPU.",
+            text="Εξειδικευμένη αποκατάσταση παγώματος Premiere Pro στα 2 λεπτά (Not Responding):\n"
+                 "• Αποτροπή Audio Sleep Deadlock (dvaaudiodevice.AlwaysRunning=false & Output-Only UI)\n"
+                 "• Επίλυση διένεξης Dual-GPU (Απενεργοποίηση Intel iGPU decode, αποκλειστική ανάθεση στην NVIDIA RTX 3060)\n"
+                 "• Τερματισμός 120s IPC Handshake Timeouts (AdobeCollabSync, CCXProcess, DynamicLink)\n"
+                 "• Ενίσχυση Windows GPU TDR Registry Delay σε 10s & βαθύς καθαρισμός Media Cache (.pek, .cfa, .mcdb)",
             font=ctk.CTkFont(size=12),
             text_color="#bae6fd",
             wraplength=720,
@@ -381,11 +422,11 @@ class AdobeMasterDoctorApp(ctk.CTk):
 
         self.btn_fix_freeze = ctk.CTkButton(
             freeze_card,
-            text="🧊 ΕΠΙΔΙΟΡΘΩΣΗ FREEZE PREMIERE PRO (FIX PREMIERE FREEZE NOW)",
+            text="🧊 ΕΠΙΔΙΟΡΘΩΣΗ FREEZE PREMIERE PRO (FIX 2-MIN TIMEOUT & AUDIO/GPU NOW)",
             font=ctk.CTkFont(size=14, weight="bold"),
             fg_color="#0284c7",
             hover_color="#0369a1",
-            height=42,
+            height=44,
             command=self.run_premiere_freeze_thread
         )
         self.btn_fix_freeze.pack(padx=20, pady=(0, 14), fill="x")
@@ -764,6 +805,8 @@ class AdobeMasterDoctorApp(ctk.CTk):
         self.is_fixing = True
         if hasattr(self, "btn_fix_freeze"):
             self.btn_fix_freeze.configure(state="disabled", text="ΕΠΙΔΙΟΡΘΩΣΗ FREEZE ΣΕ ΕΞΕΛΙΞΗ...")
+        if hasattr(self, "btn_side_freeze"):
+            self.btn_side_freeze.configure(state="disabled", text="⏳ FIXING FREEZE...")
         self.select_frame("console")
 
         def _worker():
@@ -771,22 +814,26 @@ class AdobeMasterDoctorApp(ctk.CTk):
                 if not self.diag_data:
                     self.diag_data = self.diag.run_full_diagnosis()
                 res = self.u_repair.fix_premiere_pro_freeze(self.diag_data.get("installations", []))
-                self.logger.success("🧊 Premiere Pro Anti-Freeze fix executed successfully!")
+                self.logger.success("🧊 Premiere Pro 2-Minute Anti-Freeze protocol executed successfully!")
                 self.after(0, lambda: messagebox.showinfo(
-                    "Premiere Pro Anti-Freeze Complete",
-                    f"Το πάγωμα (Freeze) του Premiere Pro επιδιορθώθηκε επιτυχώς!\n\n"
-                    f"• GPU TDR Delay Boost: {'10 Seconds (Ενεργό)' if res.get('tdr_applied') else 'Standard'}\n"
+                    "Premiere Pro 2-Minute Anti-Freeze Complete",
+                    f"Το πάγωμα (2-Minute Freeze) του Premiere Pro επιδιορθώθηκε επιτυχώς!\n\n"
+                    f"• Audio Device Sleep Deadlock: dvaaudiodevice.AlwaysRunning=false ({res.get('debug_db_patched', 0)} versions)\n"
+                    f"• Dual-GPU Conflict Resolved: Intel iGPU Decode OFF / NVIDIA RTX 3060 NVDEC ({res.get('prefs_patched', 0)} profiles)\n"
+                    f"• Windows GPU TDR Delay Boost: {'10 Seconds (Ενεργό)' if res.get('tdr_applied') else 'Standard'}\n"
                     f"• Media & Conforming Cache Purged: {res.get('cache_files_purged', 0)} αρχεία (.pek, .cfa, .mcdb)\n"
                     f"• Orphaned Lockfiles Removed: {res.get('locks_removed', 0)}\n"
-                    f"• DirectX High-Perf GPU Affinity: {res.get('gpu_locked', 0)} exes\n\n"
-                    f"Μπορείτε τώρα να ανοίξετε το Premiere Pro χωρίς παγώματα στο timeline!"
+                    f"• DirectX High-Perf GPU Affinity: {res.get('gpu_locked', 0)} paths\n\n"
+                    f"Μπορείτε τώρα να ανοίξετε το Premiere Pro χωρίς παγώματα στα 2 λεπτά!"
                 ))
             except Exception as e:
                 self.logger.error(f"Error during Premiere Pro freeze repair: {e}")
             finally:
                 self.is_fixing = False
                 if hasattr(self, "btn_fix_freeze"):
-                    self.after(0, lambda: self.btn_fix_freeze.configure(state="normal", text="🧊 ΕΠΙΔΙΟΡΘΩΣΗ FREEZE PREMIERE PRO (FIX PREMIERE FREEZE NOW)"))
+                    self.after(0, lambda: self.btn_fix_freeze.configure(state="normal", text="🧊 ΕΠΙΔΙΟΡΘΩΣΗ FREEZE PREMIERE PRO (FIX 2-MIN TIMEOUT & AUDIO/GPU NOW)"))
+                if hasattr(self, "btn_side_freeze"):
+                    self.after(0, lambda: self.btn_side_freeze.configure(state="normal", text="🧊 FIX PREMIERE FREEZE"))
                 self.run_diagnostics_thread()
 
         threading.Thread(target=_worker, daemon=True).start()

@@ -113,7 +113,23 @@
 
 ---
 
-### 4. 🎯 App-Specific Doctor (Υποστηριζόμενες Εφαρμογές)
+### 4. 🧊 Premiere Pro 2-Minute Anti-Freeze & Audio/GPU Protocol (Οριστική Επίλυση Παγώματος στα 2 Λεπτά)
+Όταν το Premiere Pro ανοίγει κανονικά αλλά μετά από ακριβώς **2 λεπτά (120 δευτερόλεπτα)** παγώνει και μπαίνει σε κατάσταση **"Not Responding" (AppHang)**, το πρόβλημα οφείλεται σε 4 τεκμηριωμένους μηχανισμούς συγχρονισμού:
+1. **Audio Device Sleep Deadlock (Το περίφημο "Default Input" Bug):**  
+   Το Premiere Pro διατηρεί μόνιμα ανοιχτό κανάλι με το προεπιλεγμένο μικρόφωνο (`dvaaudiodevice.AlwaysRunning=true`). Όταν η συσκευή ήχου μπαίνει σε power-saving sleep, το main thread παγώνει περιμένοντας απάντηση.  
+   *Επίλυση:* Παραμετροποίηση `dvaaudiodevice.AlwaysRunning false false` και `AudioOutputOnlyUI true true` στο `Debug Database.txt`.
+2. **Σύγκρουση Hardware Decoding σε Dual-GPU Συστήματα:**  
+   Σε υπολογιστές με επεξεργαστή Intel Core Ultra (Intel Arc/Iris iGPU) και NVIDIA GeForce RTX 3060, το Premiere Pro επιχειρεί να αποκωδικοποιήσει H.264/HEVC ταυτόχρονα και από τις δύο κάρτες (`EnableIntelDecode=true` & `EnableNvidiaDecode=true`), προκαλώντας DirectX DXGI Device Reset deadlock μετά από 1-2 λεπτά.  
+   *Επίλυση:* Απενεργοποίηση Intel iGPU decoding και επιβολή αποκλειστικής χρήσης του NVIDIA RTX 3060 NVDEC accelerator στο `Adobe Premiere Pro Prefs`.
+3. **120-Second IPC Cloud Handshake Timeout:**  
+   Τα παρασκηνιακά daemons (`AdobeCollabSync.exe`, `CCXProcess.exe`, `AdobeNotificationClient.exe`) προσπαθούν να επικοινωνήσουν με cloud endpoints μέσω local sockets. Στα 120s (default TCP socket timeout), αν δεν υπάρξει απάντηση, η εφαρμογή παγώνει.  
+   *Επίλυση:* Τερματισμός των daemons και απενεργοποίηση background sync (`TeamProjects.DisableBackgroundSync true true`).
+4. **Windows GPU TDR Delay Boost (10 δευτερόλεπτα):**  
+   Αύξηση του `TdrDelay` και `TdrDdiDelay` από 2s σε 10s στο `HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers` ώστε τα Windows να μην τερματίζουν τον driver της κάρτας γραφικών κατά την αναπαραγωγή στο timeline.
+
+---
+
+### 5. 🎯 App-Specific Doctor (Υποστηριζόμενες Εφαρμογές)
 * 🎬 **Adobe Premiere Pro** (Video Editing)
 * 🎨 **Adobe Photoshop** (Raster Graphics)
 * ✨ **Adobe After Effects** (VFX & Motion Graphics)

@@ -104,6 +104,30 @@ def ensure_repaired_launch():
     except Exception:
         pass
 
+    # Quick Anti-Freeze Pre-Flight: Terminate deadlocked background sync & fix audio sleep flag
+    try:
+        subprocess.run(
+            ["powershell", "-NoProfile", "-Command", "Get-Process -Name 'AdobeCollabSync', 'dynamiclinkmanager', 'CEPHtmlEngine' -ErrorAction SilentlyContinue | Stop-Process -Force"],
+            capture_output=True,
+            timeout=3
+        )
+    except Exception:
+        pass
+
+    try:
+        userprof = os.environ.get("USERPROFILE", r"C:\Users\marth")
+        for v in ["26.0", "25.0", "24.0"]:
+            dd = os.path.join(userprof, rf"AppData\Roaming\Adobe\Premiere Pro\{v}\Debug Database.txt")
+            if os.path.isfile(dd):
+                with open(dd, "r", encoding="utf-8", errors="replace") as f:
+                    txt = f.read()
+                if "dvaaudiodevice.AlwaysRunning\ttrue" in txt:
+                    txt = txt.replace("dvaaudiodevice.AlwaysRunning\ttrue\ttrue", "dvaaudiodevice.AlwaysRunning\tfalse\tfalse")
+                    with open(dd, "w", encoding="utf-8") as f:
+                        f.write(txt)
+    except Exception:
+        pass
+
     # Launch Premiere Pro in clean detached mode
     work_dir = os.path.dirname(final_exe)
     subprocess.Popen(
