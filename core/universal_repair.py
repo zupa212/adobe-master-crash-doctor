@@ -433,25 +433,48 @@ class UniversalAdobeRepairEngine:
             "AudioOutputOnlyUI": ("true", "true"),
             "dvaaudiodevice.EnableRealtimeBlockingAccessFromIOThread": ("false", "false"),
             "ExporterMPEG4.Feature.Allow_Intel_HW_Export": ("false", "false"),
+            "ExporterMPEG4.Feature.Allow_Nvidia_HW_Export": ("true", "true"),
             "TeamProjects.DisableBackgroundSync": ("true", "true"),
             "DS.GPUSnifferLaunchTimeout": ("10000", "10000"),
             "DS.GPUSnifferExecutionTimeout": ("10000", "10000"),
-            "dvasystemcompatibilityreport.use_installed_blocklist": ("false", "false")
+            "dvasystemcompatibilityreport.use_installed_blocklist": ("false", "false"),
+            "MF.EnableDirectoryPolling": ("false", "false"),
+            "EA.MediaFinder.EnableSyncDirectoryScanForFastMediaSearch": ("false", "false"),
+            "EA.Config.DisableSequenceLocking": ("true", "true"),
+            "FE.AudioPluginScanOnFirstLaunch": ("false", "false"),
+            "dunamis-force-immediate-send": ("false", "false"),
+            "dunamis.send.events.via.both.transports": ("false", "false"),
+            "dvaappsupport.betafeature.SimulateExternalAdobeID": ("false", "false"),
+            "DS.DisableDirectXDisplay": ("false", "false"),
+            "DS.ForceCPUOnly": ("false", "false"),
+            "Player.DirectXAcceleratedRenderer": ("true", "true"),
+            "DS.GPUSnifferOverride": ("0", "0"),
+            "GF.PrimaryDeviceIndex": ("0", "0")
         }
 
         patched_count = 0
-        for item in os.listdir(appdata_prem):
-            v_dir = os.path.join(appdata_prem, item)
-            if os.path.isdir(v_dir) and "backup" not in item.lower():
-                dd_path = os.path.join(v_dir, "Debug Database.txt")
+        search_dirs = [appdata_prem]
+        if os.path.isdir(r"F:\AdobePremierePro2026"):
+            search_dirs.append(r"F:\AdobePremierePro2026")
+
+        for sdir in search_dirs:
+            if sdir == r"F:\AdobePremierePro2026":
+                candidate_paths = [os.path.join(sdir, "Debug Database.txt")]
+            else:
+                candidate_paths = [
+                    os.path.join(sdir, item, "Debug Database.txt")
+                    for item in os.listdir(sdir)
+                    if os.path.isdir(os.path.join(sdir, item)) and "backup" not in item.lower()
+                ]
+                candidate_paths.append(os.path.join(sdir, "Logs", "Debug Database.txt"))
+
+            for dd_path in candidate_paths:
                 try:
-                    existing_keys = {}
+                    os.makedirs(os.path.dirname(dd_path), exist_ok=True)
                     lines = []
                     if os.path.isfile(dd_path):
                         with open(dd_path, "r", encoding="utf-8", errors="replace") as f:
                             lines = f.readlines()
-                        
-                        # Backup first
                         bak_path = dd_path + f".bak_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
                         shutil.copy2(dd_path, bak_path)
 
@@ -468,7 +491,6 @@ class UniversalAdobeRepairEngine:
                                 continue
                         new_lines.append(line)
 
-                    # Append any settings not already in the file
                     for k, (v1, v2) in target_settings.items():
                         if k not in keys_updated:
                             new_lines.append(f"{k}\t{v1}\t{v2}\n")
@@ -476,9 +498,9 @@ class UniversalAdobeRepairEngine:
                     with open(dd_path, "w", encoding="utf-8") as f:
                         f.writelines(new_lines)
                     patched_count += 1
-                    self.log(f"Debug Database: Applied Audio & Telemetry Anti-Deadlock patches to {item} ({dd_path}).", "SUCCESS")
+                    self.log(f"Debug Database: Injected 21 Anti-Deadlock telemetry & audio flags into {dd_path}.", "SUCCESS")
                 except Exception as e:
-                    self.log(f"Debug Database patch note ({item}): {e}", "WARNING")
+                    self.log(f"Debug Database patch note ({dd_path}): {e}", "WARNING")
 
         return patched_count
 
@@ -539,14 +561,36 @@ class UniversalAdobeRepairEngine:
                             content
                         )
 
-                        # 2. Cloud AutoSave Disabler
+                        # 2. Cloud AutoSave Disabler & Safe Interval
                         content = re.sub(
                             r"<BE\.Prefs\.AutoSave\.DoSaveToCloud>[^<]+</BE\.Prefs\.AutoSave\.DoSaveToCloud>",
                             "<BE.Prefs.AutoSave.DoSaveToCloud>false</BE.Prefs.AutoSave.DoSaveToCloud>",
                             content
                         )
+                        content = re.sub(
+                            r"<BE\.Prefs\.AutoSave\.Interval>[^<]+</BE\.Prefs\.AutoSave\.Interval>",
+                            "<BE.Prefs.AutoSave.Interval>15</BE.Prefs.AutoSave.Interval>",
+                            content
+                        )
 
-                        # 3. Timecode device control hang prevention
+                        # 3. Disable Sensei / MISO Background Audio & Speech AI Analysis (Deadlock trigger on MKV/MP4)
+                        content = re.sub(
+                            r"<BE\.Prefs\.General\.AutoAudioCategorizationDuringImport>[^<]+</BE\.Prefs\.General\.AutoAudioCategorizationDuringImport>",
+                            "<BE.Prefs.General.AutoAudioCategorizationDuringImport>false</BE.Prefs.General.AutoAudioCategorizationDuringImport>",
+                            content
+                        )
+                        content = re.sub(
+                            r"<BE\.Prefs\.MediaIntelligence\.AnalyzeImportedMediaForMISO>[^<]+</BE\.Prefs\.MediaIntelligence\.AnalyzeImportedMediaForMISO>",
+                            "<BE.Prefs.MediaIntelligence.AnalyzeImportedMediaForMISO>false</BE.Prefs.MediaIntelligence.AnalyzeImportedMediaForMISO>",
+                            content
+                        )
+                        content = re.sub(
+                            r"<BE\.Prefs\.MediaIntelligence\.AnalyzeImportedMediaCacheLocation>[^<]+</BE\.Prefs\.MediaIntelligence\.AnalyzeImportedMediaCacheLocation>",
+                            "<BE.Prefs.MediaIntelligence.AnalyzeImportedMediaCacheLocation>0</BE.Prefs.MediaIntelligence.AnalyzeImportedMediaCacheLocation>",
+                            content
+                        )
+
+                        # 4. Timecode device control hang prevention
                         content = re.sub(
                             r"<ML\.Prefs\.Capture\.PreferDeviceControlTimecode>[^<]+</ML\.Prefs\.Capture\.PreferDeviceControlTimecode>",
                             "<ML.Prefs.Capture.PreferDeviceControlTimecode>false</ML.Prefs.Capture.PreferDeviceControlTimecode>",
@@ -714,6 +758,71 @@ class UniversalAdobeRepairEngine:
                 self.log("NTFS Junction: Verified and repaired clean ASCII path F:\\AdobePremierePro2026.", "SUCCESS")
             except Exception:
                 pass
+
+        # 10. Fix HKLM & HKCU App Paths and Premiere Pro 26.0 registry keys
+        try:
+            os.makedirs(r"F:\AdobePremierePro2026\Plug-ins\Common", exist_ok=True)
+            # HKCU App Paths (user-level, always accessible without elevation)
+            app_p = r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\Adobe Premiere Pro.exe"
+            with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, app_p, 0, winreg.KEY_SET_VALUE) as key:
+                winreg.SetValueEx(key, "", 0, winreg.REG_SZ, r"F:\AdobePremierePro2026\Adobe Premiere Pro.exe")
+                winreg.SetValueEx(key, "Path", 0, winreg.REG_SZ, r"F:\AdobePremierePro2026\\")
+            self.log("Registry Redirection: Updated HKCU App Paths to clean ASCII junction.", "SUCCESS")
+        except Exception:
+            pass
+
+        try:
+            prem_k = r"SOFTWARE\Adobe\Premiere Pro\26.0"
+            with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, prem_k, 0, winreg.KEY_SET_VALUE) as key:
+                winreg.SetValueEx(key, "SequencePresetsPath", 0, winreg.REG_SZ, r"F:\AdobePremierePro2026\Settings\SequencePresets")
+                winreg.SetValueEx(key, "SequencePreviewPresetsPath", 0, winreg.REG_SZ, r"F:\AdobePremierePro2026\Settings\EncoderPresets\SequencePreview")
+                winreg.SetValueEx(key, "PluginInstallPath", 0, winreg.REG_SZ, r"F:\AdobePremierePro2026\Plug-ins\Common")
+                winreg.SetValueEx(key, "RecoveryOpenProjectInfos", 0, winreg.REG_SZ, "")
+            self.log("Registry Redirection: Updated HKCU Premiere Pro 26.0 presets, plugins & cleared recovery locks.", "SUCCESS")
+        except Exception:
+            pass
+
+        try:
+            app_p = r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\Adobe Premiere Pro.exe"
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, app_p, 0, winreg.KEY_SET_VALUE) as key:
+                winreg.SetValueEx(key, "", 0, winreg.REG_SZ, r"F:\AdobePremierePro2026\Adobe Premiere Pro.exe")
+                winreg.SetValueEx(key, "Path", 0, winreg.REG_SZ, r"F:\AdobePremierePro2026\\")
+            self.log("Registry Redirection: Updated Windows HKLM App Paths to clean ASCII junction.", "SUCCESS")
+        except Exception:
+            pass
+
+        try:
+            prem_k = r"SOFTWARE\Adobe\Premiere Pro\26.0"
+            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, prem_k, 0, winreg.KEY_SET_VALUE) as key:
+                winreg.SetValueEx(key, "SequencePresetsPath", 0, winreg.REG_SZ, r"F:\AdobePremierePro2026\Settings\SequencePresets")
+                winreg.SetValueEx(key, "SequencePreviewPresetsPath", 0, winreg.REG_SZ, r"F:\AdobePremierePro2026\Settings\EncoderPresets\SequencePreview")
+                winreg.SetValueEx(key, "PluginInstallPath", 0, winreg.REG_SZ, r"F:\AdobePremierePro2026\Plug-ins\Common")
+            self.log("Registry Redirection: Updated HKLM Premiere Pro 26.0 presets and plugin paths.", "SUCCESS")
+        except Exception:
+            pass
+
+        # 11. Fix Start Menu and Desktop shortcuts to point to ASCII junction
+        try:
+            ps_fix_sc = """
+            $wsh = New-Object -ComObject WScript.Shell
+            $scPaths = @(
+                'C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Adobe Premiere Pro 2026.lnk',
+                "$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\Adobe Premiere Pro 2026.lnk",
+                "$env:USERPROFILE\\Desktop\\Adobe Premiere Pro (Repaired).lnk"
+            )
+            foreach ($scPath in $scPaths) {
+                try {
+                    $sc = $wsh.CreateShortcut($scPath)
+                    $sc.TargetPath = 'F:\\AdobePremierePro2026\\Adobe Premiere Pro.exe'
+                    $sc.WorkingDirectory = 'F:\\AdobePremierePro2026'
+                    $sc.Save()
+                } catch {}
+            }
+            """
+            subprocess.run(["powershell", "-NoProfile", "-Command", ps_fix_sc], capture_output=True, timeout=4)
+            self.log("Shortcut Restorer: Re-pointed Start Menu & Desktop shortcuts to F:\\AdobePremierePro2026.", "SUCCESS")
+        except Exception:
+            pass
 
         self.log("===================================================================", "SUCCESS")
         self.log("  ✅ PREMIERE PRO 2-MINUTE ANTI-FREEZE PROTOCOL COMPLETED!", "SUCCESS")

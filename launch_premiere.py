@@ -116,20 +116,126 @@ def ensure_repaired_launch():
 
     try:
         userprof = os.environ.get("USERPROFILE", r"C:\Users\marth")
-        for v in ["26.0", "25.0", "24.0"]:
-            dd = os.path.join(userprof, rf"AppData\Roaming\Adobe\Premiere Pro\{v}\Debug Database.txt")
-            if os.path.isfile(dd):
-                with open(dd, "r", encoding="utf-8", errors="replace") as f:
-                    txt = f.read()
-                if "dvaaudiodevice.AlwaysRunning\ttrue" in txt:
-                    txt = txt.replace("dvaaudiodevice.AlwaysRunning\ttrue\ttrue", "dvaaudiodevice.AlwaysRunning\tfalse\tfalse")
+        # Ensure Anti-Deadlock Debug flags
+        dd_targets = [
+            os.path.join(userprof, r"AppData\Roaming\Adobe\Premiere Pro\26.0\Debug Database.txt"),
+            os.path.join(userprof, r"AppData\Roaming\Adobe\Premiere Pro\Logs\Debug Database.txt"),
+            r"F:\AdobePremierePro2026\Debug Database.txt"
+        ]
+        flags_to_enforce = {
+            "dvaaudiodevice.AlwaysRunning": ("false", "false"),
+            "AudioOutputOnlyUI": ("true", "true"),
+            "dvaaudiodevice.EnableRealtimeBlockingAccessFromIOThread": ("false", "false"),
+            "TeamProjects.DisableBackgroundSync": ("true", "true"),
+            "MF.EnableDirectoryPolling": ("false", "false"),
+            "EA.MediaFinder.EnableSyncDirectoryScanForFastMediaSearch": ("false", "false"),
+            "EA.Config.DisableSequenceLocking": ("true", "true"),
+            "FE.AudioPluginScanOnFirstLaunch": ("false", "false"),
+            "ExporterMPEG4.Feature.Allow_Intel_HW_Export": ("false", "false"),
+            "ExporterMPEG4.Feature.Allow_Nvidia_HW_Export": ("true", "true"),
+            "Player.DirectXAcceleratedRenderer": ("true", "true")
+        }
+        for dd in dd_targets:
+            if os.path.exists(dd):
+                try:
+                    with open(dd, "r", encoding="utf-8", errors="replace") as f:
+                        lines = f.readlines()
+                    updated = {}
+                    for l in lines:
+                        p = l.strip().split("\t")
+                        if len(p) >= 3:
+                            updated[p[0]] = (p[1], p[2])
+                    for k, v in flags_to_enforce.items():
+                        updated[k] = v
                     with open(dd, "w", encoding="utf-8") as f:
-                        f.write(txt)
+                        for k, (v1, v2) in sorted(updated.items()):
+                            f.write(f"{k}\t{v1}\t{v2}\n")
+                except Exception:
+                    pass
+
+        # Ensure Prefs file has Sensei AI & MISO disabled
+        for pv in ["26.0", "24.0"]:
+            pfile = os.path.join(userprof, rf"Documents\Adobe\Premiere Pro\{pv}\Profile-marth\Adobe Premiere Pro Prefs")
+            if os.path.isfile(pfile):
+                try:
+                    with open(pfile, "r", encoding="utf-8", errors="replace") as pf:
+                        ptxt = pf.read()
+                    ptxt = ptxt.replace("<BE.Prefs.General.AutoAudioCategorizationDuringImport>true<", "<BE.Prefs.General.AutoAudioCategorizationDuringImport>false<")
+                    ptxt = ptxt.replace("<BE.Prefs.MediaIntelligence.AnalyzeImportedMediaForMISO>true<", "<BE.Prefs.MediaIntelligence.AnalyzeImportedMediaForMISO>false<")
+                    ptxt = ptxt.replace("<BE.Prefs.MediaIntelligence.AnalyzeImportedMediaCacheLocation>1<", "<BE.Prefs.MediaIntelligence.AnalyzeImportedMediaCacheLocation>0<")
+                    ptxt = ptxt.replace("<BE.Prefs.AutoSave.Interval>5<", "<BE.Prefs.AutoSave.Interval>15<")
+                    with open(pfile, "w", encoding="utf-8") as pf:
+                        pf.write(ptxt)
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+    work_dir = os.path.dirname(final_exe)
+
+    # Ensure missing plugin directory exists
+    try:
+        os.makedirs(os.path.join(work_dir, r"Plug-ins\Common"), exist_ok=True)
+    except Exception:
+        pass
+
+    # Fix HKCU & HKLM App Paths and Premiere Pro 26.0 registry keys to clean ASCII junction
+    try:
+        with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\Adobe Premiere Pro.exe", 0, winreg.KEY_SET_VALUE) as key:
+            winreg.SetValueEx(key, "", 0, winreg.REG_SZ, final_exe)
+            winreg.SetValueEx(key, "Path", 0, winreg.REG_SZ, work_dir + "\\")
+    except Exception:
+        pass
+
+    try:
+        with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, r"SOFTWARE\Adobe\Premiere Pro\26.0", 0, winreg.KEY_SET_VALUE) as key:
+            winreg.SetValueEx(key, "SequencePresetsPath", 0, winreg.REG_SZ, os.path.join(work_dir, r"Settings\SequencePresets"))
+            winreg.SetValueEx(key, "SequencePreviewPresetsPath", 0, winreg.REG_SZ, os.path.join(work_dir, r"Settings\EncoderPresets\SequencePreview"))
+            winreg.SetValueEx(key, "PluginInstallPath", 0, winreg.REG_SZ, os.path.join(work_dir, r"Plug-ins\Common"))
+            winreg.SetValueEx(key, "RecoveryOpenProjectInfos", 0, winreg.REG_SZ, "")
+    except Exception:
+        pass
+
+    try:
+        app_path_key = r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\Adobe Premiere Pro.exe"
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, app_path_key, 0, winreg.KEY_SET_VALUE) as key:
+            winreg.SetValueEx(key, "", 0, winreg.REG_SZ, final_exe)
+            winreg.SetValueEx(key, "Path", 0, winreg.REG_SZ, work_dir + "\\")
+    except Exception:
+        pass
+
+    try:
+        prem_key = r"SOFTWARE\Adobe\Premiere Pro\26.0"
+        with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, prem_key, 0, winreg.KEY_SET_VALUE) as key:
+            winreg.SetValueEx(key, "SequencePresetsPath", 0, winreg.REG_SZ, os.path.join(work_dir, r"Settings\SequencePresets"))
+            winreg.SetValueEx(key, "SequencePreviewPresetsPath", 0, winreg.REG_SZ, os.path.join(work_dir, r"Settings\EncoderPresets\SequencePreview"))
+            winreg.SetValueEx(key, "PluginInstallPath", 0, winreg.REG_SZ, os.path.join(work_dir, r"Plug-ins\Common"))
+    except Exception:
+        pass
+
+    # Fix Start Menu and Desktop shortcuts to point to ASCII junction
+    try:
+        ps_fix_sc = f"""
+        $wsh = New-Object -ComObject WScript.Shell
+        $scPaths = @(
+            'C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Adobe Premiere Pro 2026.lnk',
+            "$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\Adobe Premiere Pro 2026.lnk",
+            "$env:USERPROFILE\\Desktop\\Adobe Premiere Pro (Repaired).lnk"
+        )
+        foreach ($scPath in $scPaths) {{
+            try {{
+                $sc = $wsh.CreateShortcut($scPath)
+                $sc.TargetPath = '{final_exe}'
+                $sc.WorkingDirectory = '{work_dir}'
+                $sc.Save()
+            }} catch {{}}
+        }}
+        """
+        subprocess.run(["powershell", "-NoProfile", "-Command", ps_fix_sc], capture_output=True, timeout=3)
     except Exception:
         pass
 
     # Launch Premiere Pro in clean detached mode
-    work_dir = os.path.dirname(final_exe)
     subprocess.Popen(
         [final_exe],
         cwd=work_dir,
