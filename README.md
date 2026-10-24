@@ -6,12 +6,28 @@
 
 ---
 
+## 🔗 Σύνδεσμοι Έργου (Repository & Download Links)
+* **🌐 GitHub Repository:** [https://github.com/zupa212/adobe-master-crash-doctor](https://github.com/zupa212/adobe-master-crash-doctor)
+* **📥 Άμεσο Κατέβασμα (Direct ZIP Download):** [https://github.com/zupa212/adobe-master-crash-doctor/archive/refs/heads/main.zip](https://github.com/zupa212/adobe-master-crash-doctor/archive/refs/heads/main.zip)
+* **⚡ Git Clone Command:**
+  ```powershell
+  git clone https://github.com/zupa212/adobe-master-crash-doctor.git
+  ```
+
+---
+
 ## ⚖️ Νομική Δήλωση & Πνευματικά Δικαιώματα (Legal Disclaimer)
 > [!IMPORTANT]
 > **Το παρόν λογισμικό αποτελεί ανεξάρτητο custom εργαλείο εντοπισμού σφαλμάτων και τεχνικής αποκατάστασης.**  
 > Όλα τα εμπορικά σήματα, λογότυπα, ονομασίες προϊόντων και πνευματικά δικαιώματα ανήκουν αποκλειστικά στην **Adobe Inc.**  
-> (Adobe®, Creative Cloud®, Premiere Pro®, Photoshop®, After Effects®, Illustrator®, Media Encoder®, Audition®, Lightroom®, InDesign®, Acrobat®).  
+> (*Adobe®, Creative Cloud®, Premiere Pro®, Photoshop®, After Effects®, Illustrator®, Media Encoder®, Audition®, Lightroom®, InDesign®, Acrobat®*).  
 > Το παρόν εργαλείο δεν αντικαθιστά τις επίσημες άδειες χρήσης και δεν τροποποιεί τα πρωτότυπα εκτελέσιμα αρχεία της Adobe Inc., αλλά επιδιορθώνει τις ρυθμίσεις του λειτουργικού συστήματος (DirectX GPU affinity, NTFS paths, Firewall rules, Font caches, AppData temp logs).
+
+---
+
+## 🛠️ Αρχιτεκτονική & Τηλεμετρία
+
+![Telemetry Matrix Showcase](assets/telemetry_matrix.png)
 
 ---
 
@@ -55,7 +71,7 @@
 
 ---
 
-## 🌟 Κύριες Δυνατότητες & Αρχιτεκτονική
+## 🌟 Κύριες Δυνατότητες & Καινοτομίες
 
 ### 1. 🎮 Multi-GPU Deep Telemetry (Βλέπει Όλες τις Κάρτες Γραφικών)
 Το σύστημα διαβάζει **κάθε κάρτα γραφικών** που είναι εγκατεστημένη στον υπολογιστή:
