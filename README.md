@@ -31,11 +31,18 @@
 
 ---
 
-## 🚀 Τρόποι Εκτέλεσης
+## 🚀 Τρόποι Εκτέλεσης (Zero Python Required)
 
-### 1. Μέσω Desktop (Γραφικό Περιβάλλον GUI)
-- Διπλό κλικ στη συντόμευση **`Adobe Master Crash Doctor`** στην Επιφάνεια Εργασίας.
-- Ή τρέξτε το [`run_doctor.bat`](file:///C:/Users/marth/.gemini/antigravity/scratch/premiere-pro-doctor/run_doctor.bat) ή απευθείας `python app.py`.
+### 1. Αυτόνομο Εκτελέσιμο `.EXE` (Δεν απαιτείται εγκατάσταση Python)
+- **🛡️ `Adobe Master Crash Doctor.exe`**: Πλήρης αυτόνομη σουίτα με σκοτεινό γραφικό περιβάλλον (GUI), Multi-GPU/Multi-Disk τηλεμετρία και Creative Cloud Root Cleaner.
+- **🎬 `Adobe Premiere Pro (Repaired).exe`**: Άμεσο 1-Click launcher του Premiere Pro με αυτόματη παράκαμψη ελληνικών/Unicode διαδρομών (NTFS Junctions), επιβολή DirectX GPU affinity και εκτέλεση ως διαχειριστής.
+
+> [!TIP]
+> Και τα δύο εκτελέσιμα αρχεία είναι 100% αυτόνομα (standalone) με ενσωματωμένο UAC Administrator manifest και τρέχουν σε οποιονδήποτε υπολογιστή με Windows 10/11 64-bit χωρίς να χρειάζεται εγκατάσταση Python ή πρόσθετων βιβλιοθηκών!
+
+### 2. Μέσω Desktop ή Script
+- Διπλό κλικ στο **`Adobe Master Crash Doctor.exe`** στην Επιφάνεια Εργασίας.
+- Ή εκτελέστε απευθείας από πηγαίο κώδικα: `python app.py`.
 
 ### 2. Μέσω Γραμμής Εντολών (CLI)
 - **⚡ Πλήρης 1-Click Universal Fix (Όλες οι Εφαρμογές):**  
