@@ -21,12 +21,15 @@ from core.nuclear_purge import NuclearPurgeEngine
 from core.adobe_cc_cleaner import AdobeCreativeCloudCleaner
 from core.system_inspector import SystemInspector
 from core.adobe_catalog import ADOBE_APPS_CATALOG
+from core.ota_updater import OTAUpdateEngine, CURRENT_VERSION, CURRENT_BUILD
 
 class AdobeMasterDoctorApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("⚡ Adobe Master Crash Doctor • Creator Edition")
+        self.title(f"⚡ Adobe Master Crash Doctor • Creator Edition (v{CURRENT_VERSION} OTA)")
+        self.ota = OTAUpdateEngine(self.logger)
+        self.ota_info = None
         self.geometry("1160x820")
         self.minsize(1040, 720)
 
@@ -60,6 +63,7 @@ class AdobeMasterDoctorApp(ctk.CTk):
 
         self.setup_ui()
         self.run_diagnostics_thread()
+        threading.Thread(target=self.silent_startup_ota_check, daemon=True).start()
 
     def setup_ui(self):
         # Master grid layout
@@ -166,6 +170,29 @@ class AdobeMasterDoctorApp(ctk.CTk):
         )
         self.btn_nav_console.grid(row=9, column=0, padx=15, pady=5, sticky="ew")
 
+        # OTA Auto-Updater Section in Sidebar
+        self.ota_card = ctk.CTkFrame(self.sidebar_frame, fg_color="#1e293b", corner_radius=8, border_color="#38bdf8", border_width=1)
+        self.ota_card.grid(row=10, column=0, padx=15, pady=(10, 4), sticky="ew")
+
+        self.lbl_ota_status = ctk.CTkLabel(
+            self.ota_card,
+            text=f"📡 OTA Engine • v{CURRENT_VERSION}",
+            font=ctk.CTkFont(size=11, weight="bold"),
+            text_color="#38bdf8"
+        )
+        self.lbl_ota_status.pack(padx=10, pady=(6, 2))
+
+        self.btn_ota_check = ctk.CTkButton(
+            self.ota_card,
+            text="🔄 Check Updates",
+            command=self.manual_check_ota,
+            font=ctk.CTkFont(size=11, weight="bold"),
+            fg_color="#0284c7",
+            hover_color="#0369a1",
+            height=26
+        )
+        self.btn_ota_check.pack(padx=10, pady=(0, 6), fill="x")
+
         # Bottom Quick Action in Sidebar
         self.btn_rescan = ctk.CTkButton(
             self.sidebar_frame,
@@ -174,7 +201,7 @@ class AdobeMasterDoctorApp(ctk.CTk):
             fg_color="#0284c7",
             hover_color="#0369a1"
         )
-        self.btn_rescan.grid(row=11, column=0, padx=15, pady=12, sticky="ew")
+        self.btn_rescan.grid(row=11, column=0, padx=15, pady=8, sticky="ew")
 
         # Creator tag in sidebar
         lbl_creator = ctk.CTkLabel(
@@ -1031,6 +1058,106 @@ class AdobeMasterDoctorApp(ctk.CTk):
                 self.run_diagnostics_thread()
 
         threading.Thread(target=_worker, daemon=True).start()
+
+    def manual_check_ota(self):
+        self.btn_ota_check.configure(state="disabled", text="Checking...")
+
+        def _worker():
+            try:
+                info = self.ota.check_for_updates()
+                self.ota_info = info
+                self.after(0, lambda: self.btn_ota_check.configure(state="normal", text="🔄 Check Updates"))
+                if info.get("update_available"):
+                    self.after(0, lambda: self.show_ota_dialog(info))
+                else:
+                    self.after(0, lambda: messagebox.showinfo(
+                        "OTA Updates • Ενημερώσεις",
+                        f"✔ Η εφαρμογή είναι πλήρως ενημερωμένη!\n\n"
+                        f"Τρέχουσα Έκδοση: v{CURRENT_VERSION}\n"
+                        f"Build: {CURRENT_BUILD}\n"
+                        f"Δεν υπάρχουν εκκρεμείς ενημερώσεις στο GitHub repository."
+                    ))
+            except Exception as e:
+                self.after(0, lambda: self.btn_ota_check.configure(state="normal", text="🔄 Check Updates"))
+                self.after(0, lambda: messagebox.showerror("OTA Error", f"Σφάλμα ελέγχου ενημερώσεων: {e}"))
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def silent_startup_ota_check(self):
+        import time
+        time.sleep(4)
+        try:
+            info = self.ota.check_for_updates()
+            self.ota_info = info
+            if info.get("update_available"):
+                self.after(0, lambda: self.lbl_ota_status.configure(text="🚀 Update Available!", text_color="#10b981"))
+                self.after(0, lambda: self.btn_ota_check.configure(text="⚡ Install Update", fg_color="#10b981", hover_color="#059669"))
+        except Exception:
+            pass
+
+    def show_ota_dialog(self, update_info):
+        import time
+        dlg = ctk.CTkToplevel(self)
+        dlg.title("⚡ Over-The-Air (OTA) Live Auto-Updater")
+        dlg.geometry("560x440")
+        dlg.resizable(False, False)
+        dlg.attributes("-topmost", True)
+        dlg.grab_set()
+
+        lbl_h = ctk.CTkLabel(dlg, text="⚡ Over-The-Air (OTA) Auto-Updater", font=ctk.CTkFont(size=18, weight="bold"), text_color="#38bdf8")
+        lbl_h.pack(padx=20, pady=(18, 2))
+
+        lbl_sub = ctk.CTkLabel(dlg, text=f"Τρέχουσα έκδοση: v{CURRENT_VERSION}  ➔  Νέα έκδοση: v{update_info.get('latest_version')}", font=ctk.CTkFont(size=13, weight="bold"), text_color="#10b981")
+        lbl_sub.pack(padx=20, pady=(0, 10))
+
+        box = ctk.CTkTextbox(dlg, height=160, corner_radius=8, fg_color="#1e293b")
+        box.pack(padx=20, pady=(0, 15), fill="x")
+        box.insert("1.0", "📋 ΤΙ ΝΕΟ ΥΠΑΡΧΕΙ ΣΤΗ ΝΕΑ ΕΚΔΟΣΗ:\n\n")
+        changelog = update_info.get("changelog", [])
+        if isinstance(changelog, list):
+            for item in changelog:
+                box.insert("end", f"• {item}\n")
+        else:
+            box.insert("end", str(changelog))
+        box.configure(state="disabled")
+
+        lbl_status = ctk.CTkLabel(dlg, text="Έτοιμο για αυτόματη λήψη και εγκατάσταση.", font=ctk.CTkFont(size=12), text_color="#94a3b8")
+        lbl_status.pack(padx=20, pady=(0, 4))
+
+        progress = ctk.CTkProgressBar(dlg, height=14)
+        progress.pack(padx=20, pady=(0, 15), fill="x")
+        progress.set(0)
+
+        btn_action = ctk.CTkButton(dlg, text="🚀 Λήψη & Αυτόματη Εγκατάσταση (OTA)", font=ctk.CTkFont(size=14, weight="bold"), fg_color="#10b981", hover_color="#059669", height=40)
+        btn_action.pack(padx=20, pady=(0, 15), fill="x")
+
+        def _start_download():
+            btn_action.configure(state="disabled", text="ΛΗΨΗ ΣΕ ΕΞΕΛΙΞΗ...")
+
+            def _worker():
+                try:
+                    def _on_prog(pct, cur, total):
+                        mb_c = round(cur / (1024*1024), 1)
+                        mb_t = round(total / (1024*1024), 1)
+                        self.after(0, lambda: progress.set(pct / 100.0))
+                        self.after(0, lambda: lbl_status.configure(text=f"Λήψη: {pct}% ({mb_c} MB / {mb_t} MB)..."))
+
+                    dl_file = self.ota.download_update(update_info["download_url"], progress_callback=_on_prog)
+                    self.after(0, lambda: lbl_status.configure(text="Επαλήθευση αρχείου ΟΚ! Επανεκκίνηση εφαρμογής...", text_color="#10b981"))
+                    self.after(0, lambda: progress.set(1.0))
+                    time.sleep(1)
+                    success = self.ota.apply_update_and_restart(dl_file)
+                    if success:
+                        self.after(0, self.destroy)
+                    else:
+                        self.after(0, lambda: messagebox.showerror("OTA Error", "Αποτυχία εκκίνησης του updater script."))
+                except Exception as ex:
+                    self.after(0, lambda: messagebox.showerror("OTA Error", f"Σφάλμα κατά τη λήψη OTA: {ex}"))
+                    self.after(0, lambda: btn_action.configure(state="normal", text="Δοκιμάστε Ξανά"))
+
+            threading.Thread(target=_worker, daemon=True).start()
+
+        btn_action.configure(command=_start_download)
 
     def action_purge_fonts(self):
         self.select_frame("console")

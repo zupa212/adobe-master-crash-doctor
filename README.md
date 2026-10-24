@@ -77,6 +77,11 @@
   ```powershell
   python cli.py --uninstall-cc
   ```
+- **📡 Over-The-Air (OTA) Live Auto-Update Check & Install:**  
+  ```powershell
+  python cli.py --check-ota
+  python cli.py --ota-update
+  ```
 
 ---
 
@@ -143,9 +148,17 @@
 
 ---
 
-### 5. 🗑️ Creative Cloud Root Uninstaller & Service Cleaner
+### 6. 🗑️ Creative Cloud Root Uninstaller & Service Cleaner
 * Τερματισμός όλων των παρασκηνιακών διεργασιών.
 * Οριστική διαγραφή Windows Services: `AdobeUpdateService`, `AGSService`, `AdobeARMservice`.
 * Αφαίρεση Scheduled Tasks και Startup Run keys.
 * Αυτόματη λήψη & εκτέλεση του επίσημου **Adobe Creative Cloud Cleaner Tool** σε silent mode (`--eulaAccepted=1 --removeAll=ALL`).
 * Εκκαθάριση φακέλων `OOBE`, `SLStore`, `SLData` και `Creative Cloud Libraries`.
+
+---
+
+### 7. 📡 OTA (Over-The-Air) Live Auto-Updater Engine
+Η εφαρμογή διαθέτει ενσωματωμένο σύστημα αυτόματων Over-The-Air (OTA) ενημερώσεων:
+* **Αυτόματος Έλεγχος στο Παρασκήνιο:** Ελέγχει αυτόματα στο GitHub (`version.json` & GitHub Releases API) κατά την εκκίνηση.
+* **1-Click In-App Update:** Όταν κυκλοφορεί νέα έκδοση ή επιδιορθώσεις, εμφανίζει ένδειξη και επιτρέπει άμεση λήψη και εγκατάσταση με 1 κλικ μέσα από το GUI χωρίς να χρειάζεται χειροκίνητο download από browser.
+* **Ασφαλής Επανεκκίνηση:** Χρησιμοποιεί detached background updater script για ασφαλή αντικατάσταση του εκτελέσιμου αρχείου και αυτόματη επανεκκίνηση της νέας έκδοσης!

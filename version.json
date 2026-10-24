@@ -1,0 +1,18 @@
+{
+  "version": "1.2.0",
+  "build_number": 120,
+  "release_date": "2026-10-24",
+  "min_os": "Windows 10 / 11 64-bit",
+  "app_name": "Adobe Master Crash Doctor",
+  "download_url": "https://github.com/zupa212/adobe-master-crash-doctor/raw/main/Adobe%20Master%20Crash%20Doctor.exe",
+  "launcher_url": "https://github.com/zupa212/adobe-master-crash-doctor/raw/main/Adobe%20Premiere%20Pro%20(Repaired).exe",
+  "repository": "https://github.com/zupa212/adobe-master-crash-doctor",
+  "changelog": [
+    "⚡ OTA Over-The-Air Live Auto-Updater Engine: 1-Click live in-app binary updates directly from GitHub",
+    "🧊 Surgical Premiere Pro 2-Minute Freeze & Audio Hardware Sleep Deadlock Fix (dvaaudiodevice.AlwaysRunning=false)",
+    "🎮 Dual-GPU Conflict Resolution: Intel Ultra 7 Arc decode disabled / NVIDIA RTX 3060 prioritized",
+    "🛡️ RuntimeInstaller.dll 0xc0000005 APPCRASH & NTFS Permissions Automatic Resolver",
+    "💾 Multi-Disk NVMe & Multi-GPU Deep Telemetry System",
+    "🗑️ Adobe Creative Cloud Root Uninstaller & Service Cleaner"
+  ]
+}

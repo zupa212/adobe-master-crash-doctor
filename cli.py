@@ -55,6 +55,8 @@ def main():
     parser.add_argument("--versions", action="store_true", help="Display version analysis & rollback recommendations")
     parser.add_argument("--fix-freeze-premiere", "--anti-freeze", action="store_true", help="Fix Premiere Pro timeline freeze & GPU TDR timeout deadlock")
     parser.add_argument("--fix-runtime-installer", action="store_true", help="Fix RuntimeInstaller.dll APPCRASH (0xc0000005 Access Violation)")
+    parser.add_argument("--check-ota", action="store_true", help="Check for Over-The-Air (OTA) updates on GitHub")
+    parser.add_argument("--ota-update", action="store_true", help="Download and apply the latest OTA update directly from GitHub")
 
     args = parser.parse_args()
     logger = DoctorLogger()
@@ -66,8 +68,44 @@ def main():
     nuclear = NuclearPurgeEngine(logger)
     cc_cleaner = AdobeCreativeCloudCleaner(logger)
     inspector = SystemInspector(logger)
+    from core.ota_updater import OTAUpdateEngine
+    ota = OTAUpdateEngine(logger)
 
     print(BANNER)
+
+    if args.check_ota:
+        print("\n[*] Checking GitHub for Over-The-Air (OTA) Updates...")
+        info = ota.check_for_updates()
+        if info.get("update_available"):
+            logger.success(f"Update Available: v{info['latest_version']} (Current: v{info['current_version']})")
+            print("Release Date:", info.get("release_date"))
+            print("Download URL:", info.get("download_url"))
+            print("Changelog:")
+            for item in info.get("changelog", []):
+                print(f" - {item}")
+        else:
+            logger.success(f"You are running the latest version (v{info['current_version']}).")
+        return
+
+    if args.ota_update:
+        print("\n[*] Starting Live Over-The-Air (OTA) Auto-Update...")
+        info = ota.check_for_updates()
+        if not info.get("update_available"):
+            logger.success(f"Already up to date (v{info['current_version']}). No update required.")
+            return
+
+        logger.info(f"Downloading v{info['latest_version']}...")
+        def _prog(pct, cur, total):
+            mb_cur = round(cur / (1024 * 1024), 1)
+            mb_tot = round(total / (1024 * 1024), 1)
+            sys.stdout.write(f"\rProgress: {pct}% ({mb_cur}MB / {mb_tot}MB)")
+            sys.stdout.flush()
+
+        dl_path = ota.download_update(info["download_url"], progress_callback=_prog)
+        print("\nDownload complete. Applying update and restarting...")
+        ota.apply_update_and_restart(dl_path)
+        logger.success("OTA update process dispatched. Application will restart.")
+        return
 
     if args.fix_runtime_installer:
         print("\n[*] Executing RuntimeInstaller.DLL 0xc0000005 Repair Engine...")
