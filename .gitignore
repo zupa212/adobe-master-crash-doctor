@@ -1,0 +1,21 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Backups
+Preferences_AutoBackup_*/
+*.tmp
+*.log
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# System
+Thumbs.db
+Desktop.ini
+.DS_Store

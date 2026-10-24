@@ -1,0 +1,6 @@
+{
+  "auto_gpu_override": true,
+  "auto_junction": true,
+  "clean_temp_files": true,
+  "backup_preferences": true
+}

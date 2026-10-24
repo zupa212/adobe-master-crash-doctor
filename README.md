@@ -1,0 +1,110 @@
+# ⚡ Adobe Master Crash Doctor • Creator Edition
+> **Αυτόνομο Εργαλείο Διάγνωσης, Multi-GPU / Multi-Disk Hardware Audit & Customizable 1-Click Fix για Όλες τις Εφαρμογές Adobe**  
+> *Custom δημιουργία & ανάπτυξη καθαρά στοχευμένη στην οριστική εξάλειψη των startup crashes.*
+
+![Adobe Master Crash Doctor Banner](assets/banner.png)
+
+---
+
+## ⚖️ Νομική Δήλωση & Πνευματικά Δικαιώματα (Legal Disclaimer)
+> [!IMPORTANT]
+> **Το παρόν λογισμικό αποτελεί ανεξάρτητο custom εργαλείο εντοπισμού σφαλμάτων και τεχνικής αποκατάστασης.**  
+> Όλα τα εμπορικά σήματα, λογότυπα, ονομασίες προϊόντων και πνευματικά δικαιώματα ανήκουν αποκλειστικά στην **Adobe Inc.**  
+> (Adobe®, Creative Cloud®, Premiere Pro®, Photoshop®, After Effects®, Illustrator®, Media Encoder®, Audition®, Lightroom®, InDesign®, Acrobat®).  
+> Το παρόν εργαλείο δεν αντικαθιστά τις επίσημες άδειες χρήσης και δεν τροποποιεί τα πρωτότυπα εκτελέσιμα αρχεία της Adobe Inc., αλλά επιδιορθώνει τις ρυθμίσεις του λειτουργικού συστήματος (DirectX GPU affinity, NTFS paths, Firewall rules, Font caches, AppData temp logs).
+
+---
+
+## 🚀 Τρόποι Εκτέλεσης
+
+### 1. Μέσω Desktop (Γραφικό Περιβάλλον GUI)
+- Διπλό κλικ στη συντόμευση **`Adobe Master Crash Doctor`** στην Επιφάνεια Εργασίας.
+- Ή τρέξτε το [`run_doctor.bat`](file:///C:/Users/marth/.gemini/antigravity/scratch/premiere-pro-doctor/run_doctor.bat) ή απευθείας `python app.py`.
+
+### 2. Μέσω Γραμμής Εντολών (CLI)
+- **⚡ Πλήρης 1-Click Universal Fix (Όλες οι Εφαρμογές):**  
+  ```powershell
+  python cli.py --fix-all
+  ```
+- **🛠️ Customizable 1-Click Fix (Επιλογή Modules & Εφαρμογών):**  
+  ```powershell
+  # Επιλέξτε συγκεκριμένα modules: junction, gpu, fonts, cache, plugins, firewall, credentials, shortcuts
+  python cli.py --custom-fix --modules fonts,cache,firewall --apps premiere,acrobat
+  python cli.py --custom-fix --modules all --apps premiere,photoshop
+  ```
+- **🎯 Στοχευμένη Επιδιόρθωση ανά Εφαρμογή:**  
+  ```powershell
+  python cli.py --fix-app premiere
+  python cli.py --fix-app photoshop
+  python cli.py --fix-app aftereffects
+  python cli.py --fix-app illustrator
+  python cli.py --fix-app acrobat
+  ```
+- **🔍 Πλήρης Αυτόνομη Διάγνωση Συστήματος (Multi-GPU & Multi-Disk):**  
+  ```powershell
+  python cli.py --diagnose
+  ```
+- **🔥 Nuclear Root Purge (Καθαρισμός Μέχρι τη Ρίζα):**  
+  ```powershell
+  python cli.py --nuclear-purge
+  ```
+- **🗑️ Creative Cloud Root Uninstaller & Service Cleaner:**  
+  ```powershell
+  python cli.py --uninstall-cc
+  ```
+
+---
+
+## 🌟 Κύριες Δυνατότητες & Αρχιτεκτονική
+
+### 1. 🎮 Multi-GPU Deep Telemetry (Βλέπει Όλες τις Κάρτες Γραφικών)
+Το σύστημα διαβάζει **κάθε κάρτα γραφικών** που είναι εγκατεστημένη στον υπολογιστή:
+* **Αναγνώριση Hardware:** Εντοπίζει όλους τους κατασκευαστές (NVIDIA, AMD Radeon, Intel Arc/Iris/UHD).
+* **Πλήρης Τηλεμετρία:** Όνομα κάρτας, Dedicated VRAM (σε GB και MB), έκδοση Driver, ημερομηνία κυκλοφορίας driver, PCI Device ID και κατάσταση λειτουργίας (Status: OK).
+* **Display Mode & Active Output:** Εντοπίζει σε ποια κάρτα γραφικών είναι συνδεδεμένη η κύρια οθόνη (π.χ. `2560 x 1600 @ 60Hz`).
+* **Επίλυση Συγκρούσεων Dual-GPU:** Στα συστήματα με δύο κάρτες (π.χ. NVIDIA RTX 3060 + Intel iGPU), επιβάλλει στο Windows DirectX Registry (`HKCU\Software\Microsoft\DirectX\UserGpuPreferences`) την τιμή `GpuPreference=2;` (High Performance) ώστε το Adobe GPUSniffer και το Mercury Playback να μην κρασάρουν στην εκκίνηση.
+
+---
+
+### 2. 💾 Multi-Disk Deep Scanner (Διαβάζει Όλους τους Δίσκους του PC)
+* **Δυναμικός Εντοπισμός Όλων των Τόμων:** Εντοπίζει αυτόματα όλους τους λογικούς δίσκους (`C:`, `D:`, `F:`, εξωτερικούς σκληρούς δίσκους USB, NVMe SSDs).
+* **Τηλεμετρία Χώρου & Τύπου Δίσκου:** Εμφανίζει Volume Label (`Windows-SSD`, `OS`, `BACKUP`), File System (`NTFS`, `exFAT`), καθώς και Free / Total GB.
+* **Βαθύς Αναδρομικός Έλεγχος (Depth 3):** Σαρώνει όλους τους δίσκους για εγκατεστημένες εφαρμογές Adobe, repacks και διασκορπισμένες cache.
+* **Αυτόματη Δημιουργία NTFS ASCII Junctions:** Εάν κάποια εφαρμογή έχει εγκατασταθεί σε φάκελο με ελληνικούς ή μη-ASCII χαρακτήρες (π.χ. `F:\Νέος φάκελος (2)\...`), δημιουργεί άμεσα καθαρό NTFS Junction στον ίδιο δίσκο (π.χ. `F:\AdobePremierePro2026`) χωρίς να απαιτείται μετακίνηση ή αντιγραφή gigabytes δεδομένων!
+
+---
+
+### 3. 🛠️ Customizable 1-Click Fix Engine
+Στο Tab **`⚡ Custom 1-Click Fix`**, ο χρήστης μπορεί να επιλέξει ακριβώς ποια modules θα εκτελεστούν:
+1. ☑️ **Kill Lingering Processes:** Ασφαλής τερματισμός κολλημένων processes (GPUSniffer, dynamiclinkmanager κ.α.).
+2. ☑️ **Create NTFS ASCII Junctions:** Παράκαμψη μη-λατινικών χαρακτήρων διαδρομής.
+3. ☑️ **High-Perf GPU Affinity (Registry):** Εγγραφή `GpuPreference=2;` για όλα τα Adobe exes.
+4. ☑️ **Purge Font Caches:** Διαγραφή αλλοιωμένων `AdobeFnt*.lst` και `.db` (αποτρέπει σιωπηρά κρασαρίσματα σε Photoshop, Illustrator, Premiere).
+5. ☑️ **Purge Media & Scratch Caches:** Εκκαθάριση `.ims`, `.pek`, `.cfa`, CameraRaw και temp αρχείων σε όλους τους δίσκους.
+6. ☑️ **Reset Plugin DBs (Auto-Backup):** Μηδενισμός `Plugin Loading.log` και `AudioPluginManagerSettings.xml` με αυτόματο backup.
+7. ☑️ **Windows Firewall Loopback Rules:** Ρύθμιση κανόνων 127.0.0.1 για άμεση επικοινωνία εσωτερικών sockets.
+8. ☑️ **Purge Stale Credential Vault:** Καθαρισμός παλιών tokens στο Windows Credential Manager.
+9. ☑️ **Create Repaired Desktop Shortcuts:** Δημιουργία έτοιμης συντόμευσης στην Επιφάνεια Εργασίας.
+
+---
+
+### 4. 🎯 App-Specific Doctor (Υποστηριζόμενες Εφαρμογές)
+* 🎬 **Adobe Premiere Pro** (Video Editing)
+* 🎨 **Adobe Photoshop** (Raster Graphics)
+* ✨ **Adobe After Effects** (VFX & Motion Graphics)
+* 📐 **Adobe Illustrator** (Vector Design)
+* 🎞️ **Adobe Media Encoder** (Rendering & Transcoding)
+* 📄 **Adobe Acrobat DC** (PDF Documents)
+* 🎙️ **Adobe Audition** (Digital Audio Workstation)
+* 📷 **Adobe Lightroom Classic** (Photo Development)
+* 📰 **Adobe InDesign** (Page Layout & Typography)
+* 🧊 **Adobe Substance 3D Suite** (3D Materials & Texturing)
+
+---
+
+### 5. 🗑️ Creative Cloud Root Uninstaller & Service Cleaner
+* Τερματισμός όλων των παρασκηνιακών διεργασιών.
+* Οριστική διαγραφή Windows Services: `AdobeUpdateService`, `AGSService`, `AdobeARMservice`.
+* Αφαίρεση Scheduled Tasks και Startup Run keys.
+* Αυτόματη λήψη & εκτέλεση του επίσημου **Adobe Creative Cloud Cleaner Tool** σε silent mode (`--eulaAccepted=1 --removeAll=ALL`).
+* Εκκαθάριση φακέλων `OOBE`, `SLStore`, `SLData` και `Creative Cloud Libraries`.
