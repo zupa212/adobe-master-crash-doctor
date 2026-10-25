@@ -28,6 +28,7 @@ class AdobeMasterDoctorApp(ctk.CTk):
         super().__init__()
 
         self.title(f"⚡ Adobe Master Crash Doctor • Creator Edition (v{CURRENT_VERSION} OTA)")
+        self.logger = DoctorLogger(callback=self.append_log)
         self.ota = OTAUpdateEngine(self.logger)
         self.ota_info = None
         self.geometry("1160x820")
@@ -37,7 +38,6 @@ class AdobeMasterDoctorApp(ctk.CTk):
         ctk.set_default_color_theme("blue")
 
         # Initialize core engines (Zero LLM Relay / 100% Native)
-        self.logger = DoctorLogger(callback=self.append_log)
         self.diag = AdobeDiagnostics(self.logger)
         self.u_repair = UniversalAdobeRepairEngine(self.logger)
         self.repair = PremiereRepairEngine(self.logger)
@@ -772,9 +772,16 @@ class AdobeMasterDoctorApp(ctk.CTk):
 
     def append_log(self, text):
         def _update():
-            self.txt_console.insert("end", text + "\n")
-            self.txt_console.see("end")
-        self.after(0, _update)
+            if hasattr(self, "txt_console"):
+                try:
+                    self.txt_console.insert("end", text + "\n")
+                    self.txt_console.see("end")
+                except Exception:
+                    pass
+        try:
+            self.after(0, _update)
+        except Exception:
+            pass
 
     # ---------------- BACKGROUND WORKERS ---------------- #
     def run_diagnostics_thread(self):
