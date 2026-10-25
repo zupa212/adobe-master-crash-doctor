@@ -1361,7 +1361,13 @@ class AdobeMasterDoctorApp(ctk.CTk):
 
         def _worker():
             try:
-                info = self.ota.check_for_updates()
+                hardware = getattr(self.inspector, "_cached_profile", None)
+                if not hardware:
+                    try:
+                        hardware = self.inspector.inspect_complete_system()
+                    except Exception:
+                        hardware = None
+                info = self.ota.check_for_updates(hardware_profile=hardware)
                 self.ota_info = info
                 self.after(0, lambda: self.btn_ota_check.configure(state="normal", text="🔄 Check Updates"))
                 if info.get("update_available"):
@@ -1384,7 +1390,8 @@ class AdobeMasterDoctorApp(ctk.CTk):
         import time
         time.sleep(4)
         try:
-            info = self.ota.check_for_updates()
+            hardware = getattr(self.inspector, "_cached_profile", None)
+            info = self.ota.check_for_updates(hardware_profile=hardware)
             self.ota_info = info
             if info.get("update_available"):
                 self.after(0, lambda: self.lbl_ota_status.configure(text="🚀 Update Available!", text_color="#10b981"))

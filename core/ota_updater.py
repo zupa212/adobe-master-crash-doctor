@@ -4,12 +4,15 @@ import json
 import time
 import shutil
 import urllib.request
+import urllib.parse
 import subprocess
 from typing import Dict, Any, Optional, Callable
 
 CURRENT_VERSION = "1.2.4"
 CURRENT_BUILD = 124
-MANIFEST_URL = "https://raw.githubusercontent.com/zupa212/adobe-master-crash-doctor/main/version.json"
+PRIMARY_OTA_URL = "https://premiere-pro-doctor.vercel.app/api/version"
+TELEMETRY_URL = "https://premiere-pro-doctor.vercel.app/api/ota-telemetry"
+FALLBACK_MANIFEST_URL = "https://raw.githubusercontent.com/zupa212/adobe-master-crash-doctor/main/version.json"
 REPO_API_URL = "https://api.github.com/repos/zupa212/adobe-master-crash-doctor/releases/latest"
 REPO_URL = "https://github.com/zupa212/adobe-master-crash-doctor"
 
@@ -25,27 +28,81 @@ class OTAUpdateEngine:
         else:
             print(f"[{level}] {msg}", flush=True)
 
-    def check_for_updates(self) -> Dict[str, Any]:
+    def send_telemetry(self, action: str, extra: Optional[Dict[str, Any]] = None):
+        """Sends telemetry ping to Vercel so activity is recorded live in Vercel Dashboard logs."""
+        try:
+            payload = {
+                "action": action,
+                "user": os.environ.get("USERNAME", "Creator"),
+                "client_version": self.current_version,
+                "client_build": self.current_build,
+                "target_version": CURRENT_VERSION,
+                "os": f"Windows {os.environ.get('PROCESSOR_ARCHITECTURE', 'x64')}"
+            }
+            if extra:
+                payload.update(extra)
+
+            url = f"{TELEMETRY_URL}?t={int(time.time())}"
+            data = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(
+                url,
+                data=data,
+                headers={"Content-Type": "application/json", "User-Agent": "AdobeMasterCrashDoctor-OTA"}
+            )
+            urllib.request.urlopen(req, timeout=3)
+        except Exception:
+            pass
+
+    def check_for_updates(self, hardware_profile: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
-        Polls the remote GitHub repository for OTA manifest or latest release.
-        Returns update status, latest version, download url, and changelog.
+        Polls Vercel / GitHub for OTA manifest or latest release.
+        Includes hardware telemetry in request to populate Vercel Dashboard logs.
         """
-        self.log("OTA Engine: Checking GitHub repository for live updates...", "INFO")
+        self.log("OTA Engine: Checking for live updates...", "INFO")
         manifest_data = None
 
-        # 1. Try raw manifest file first (version.json)
+        user = os.environ.get("USERNAME", "Creator")
+        gpu_name = "NVIDIA / Dedicated GPU"
+        cpu_name = "Multi-Core CPU"
+        if hardware_profile:
+            gpu_name = hardware_profile.get("gpu", {}).get("primary_dgpu", gpu_name)
+            cpu_name = hardware_profile.get("cpu", {}).get("name", cpu_name)
+
+        params = urllib.parse.urlencode({
+            "client_version": self.current_version,
+            "build": self.current_build,
+            "user": user,
+            "gpu": gpu_name[:40],
+            "cpu": cpu_name[:40],
+            "nocache": int(time.time())
+        })
+
+        # 1. Primary: Vercel Serverless Function (Provides rich Vercel Dashboard logging)
         try:
             req = urllib.request.Request(
-                MANIFEST_URL + f"?nocache={int(time.time())}",
-                headers={"User-Agent": "AdobeMasterCrashDoctor-OTA"}
+                f"{PRIMARY_OTA_URL}?{params}",
+                headers={"User-Agent": f"AdobeMasterCrashDoctor-OTA/{self.current_version}"}
             )
             with urllib.request.urlopen(req, timeout=6) as response:
                 if response.status == 200:
                     manifest_data = json.loads(response.read().decode("utf-8"))
         except Exception as e:
-            self.log(f"OTA Manifest Note: {e}. Falling back to GitHub Releases API...", "DEBUG")
+            self.log(f"Vercel OTA Note: {e}. Falling back to GitHub raw manifest...", "DEBUG")
 
-        # 2. Fallback to GitHub Releases API
+        # 2. Fallback: GitHub raw manifest file (version.json)
+        if not manifest_data:
+            try:
+                req = urllib.request.Request(
+                    FALLBACK_MANIFEST_URL + f"?nocache={int(time.time())}",
+                    headers={"User-Agent": "AdobeMasterCrashDoctor-OTA"}
+                )
+                with urllib.request.urlopen(req, timeout=6) as response:
+                    if response.status == 200:
+                        manifest_data = json.loads(response.read().decode("utf-8"))
+            except Exception as e:
+                self.log(f"GitHub OTA Note: {e}. Falling back to GitHub Releases API...", "DEBUG")
+
+        # 3. Fallback: GitHub Releases API
         if not manifest_data:
             try:
                 req = urllib.request.Request(
@@ -56,18 +113,17 @@ class OTAUpdateEngine:
                     if response.status == 200:
                         rel = json.loads(response.read().decode("utf-8"))
                         tag = rel.get("tag_name", "").lstrip("v")
-                        # Find asset url
                         dl_url = None
                         for asset in rel.get("assets", []):
                             if asset.get("name", "").endswith(".exe"):
                                 dl_url = asset.get("browser_download_url")
                                 break
                         if not dl_url:
-                            dl_url = f"https://github.com/zupa212/adobe-master-crash-doctor/raw/main/Adobe%20Master%20Crash%20Doctor.exe"
+                            dl_url = "https://github.com/zupa212/adobe-master-crash-doctor/raw/main/Adobe%20Master%20Crash%20Doctor.exe"
 
                         manifest_data = {
-                            "version": tag or "1.2.0",
-                            "build_number": 120,
+                            "version": tag or "1.2.4",
+                            "build_number": 124,
                             "release_date": rel.get("published_at", "")[:10],
                             "download_url": dl_url,
                             "changelog": [rel.get("body", "General performance and repair updates.")]
@@ -80,7 +136,7 @@ class OTAUpdateEngine:
                 "update_available": False,
                 "current_version": self.current_version,
                 "latest_version": self.current_version,
-                "error": "Could not connect to GitHub OTA server."
+                "error": "Could not connect to OTA server."
             }
 
         remote_ver_str = str(manifest_data.get("version", self.current_version))
@@ -104,7 +160,7 @@ class OTAUpdateEngine:
             "current_version": self.current_version,
             "latest_version": remote_ver_str,
             "release_date": manifest_data.get("release_date", "Today"),
-            "download_url": manifest_data.get("download_url", f"https://github.com/zupa212/adobe-master-crash-doctor/raw/main/Adobe%20Master%20Crash%20Doctor.exe"),
+            "download_url": manifest_data.get("download_url", "https://github.com/zupa212/adobe-master-crash-doctor/raw/main/Adobe%20Master%20Crash%20Doctor.exe"),
             "changelog": manifest_data.get("changelog", []),
             "manifest": manifest_data
         }
@@ -122,17 +178,20 @@ class OTAUpdateEngine:
         progress_callback: Optional[Callable[[float, int, int], None]] = None
     ) -> str:
         """
-        Downloads the latest executable from GitHub with real-time streaming progress.
-        Returns the path to the verified downloaded binary.
+        Downloads the latest executable from GitHub/Vercel with real-time streaming progress.
+        Notifies Vercel telemetry live so dashboard registers download start & completion.
         """
         temp_dir = os.environ.get("TEMP", r"C:\Windows\Temp")
         dest_path = os.path.join(temp_dir, f"Adobe_Master_Crash_Doctor_vUpdate_{int(time.time())}.exe")
 
         self.log(f"OTA Engine: Initiating download from: {download_url}", "INFO")
 
+        # Telemetry: download started
+        self.send_telemetry("download_started", {"target_url": download_url})
+
         req = urllib.request.Request(
             download_url,
-            headers={"User-Agent": "AdobeMasterCrashDoctor-OTA"}
+            headers={"User-Agent": f"AdobeMasterCrashDoctor-OTA/{self.current_version}"}
         )
 
         with urllib.request.urlopen(req, timeout=30) as response:
@@ -165,6 +224,12 @@ class OTAUpdateEngine:
             if magic != b"MZ":
                 raise RuntimeError("Downloaded file is not a valid Windows executable (Missing MZ header).")
 
+        # Telemetry: download completed
+        self.send_telemetry("download_completed", {
+            "target_url": download_url,
+            "file_size_mb": round(file_size / (1024 * 1024), 2)
+        })
+
         self.log(f"OTA Engine: Download verified successfully ({round(file_size / (1024*1024), 2)} MB).", "SUCCESS")
         return dest_path
 
@@ -173,11 +238,15 @@ class OTAUpdateEngine:
         Safely swaps the running executable with the new version and relaunches the application.
         Works seamlessly on Windows using a detached launcher script.
         """
+        # Telemetry: update applied
+        self.send_telemetry("update_applied", {"new_exe": new_exe_path})
+
         if not target_exe_path:
             if getattr(sys, "frozen", False):
                 target_exe_path = sys.executable
             else:
                 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                target_exe_path = os.path.join(base_dir, "Adobe Master Crash Doctor.exe")
                 target_exe_path = os.path.join(base_dir, "Adobe Master Crash Doctor.exe")
 
         current_pid = os.getpid()
