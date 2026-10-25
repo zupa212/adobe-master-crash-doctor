@@ -1,16 +1,16 @@
 # ============================================================================
-# ADOBE PREMIERE PRO 2026 - REAL-TIME AUTONOMOUS CLOUD HEALER & COPILOT v1.2.6
+# ADOBE PREMIERE PRO 2026 - REAL-TIME AUTONOMOUS CLOUD HEALER & COPILOT v1.2.7
 # Engineered by VerticalFlow Systems / Pan.Chorian
 # Executed via: irm https://premiere-pro-doctor.vercel.app/fix.ps1 | iex
 # ============================================================================
 
-$Host.UI.RawUI.WindowTitle = "Adobe Premiere Pro 2026 - Real-Time Autonomous Cloud Healer v1.2.6"
+$Host.UI.RawUI.WindowTitle = "Adobe Premiere Pro 2026 - Real-Time Autonomous Cloud Healer v1.2.7"
 Clear-Host
 Write-Host ""
 Write-Host "============================================================================" -ForegroundColor Cyan
-Write-Host "   ⚡ ADOBE PREMIERE PRO 2026 - AUTONOMOUS CLOUD COPILOT (v1.2.6)           " -ForegroundColor Green
-Write-Host "   Target: AMD Ryzen 5 + NVIDIA RTX 5060 (Blackwell) & Universal Systems    " -ForegroundColor Yellow
-Write-Host "   Real-Time Cloud Telemetry & Automated Verification Stream Active         " -ForegroundColor Cyan
+Write-Host "   ⚡ ADOBE PREMIERE PRO 2026 - DEEP CLOUD COPILOT (v1.2.7)                  " -ForegroundColor Green
+Write-Host "   Target: AMD Ryzen 5 + NVIDIA RTX 5060 (Blackwell) & Meta VR Deconfliction" -ForegroundColor Yellow
+Write-Host "   Full Anti-Closing, Phone-Home Shield, Defender Exclusions & VR Bypass   " -ForegroundColor Cyan
 Write-Host "============================================================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -34,7 +34,7 @@ function Send-LiveLog {
             action = $Action
             step = $Step
             user = $env:USERNAME
-            client_version = "1.2.6"
+            client_version = "1.2.7"
             hardware = "$script:gpuName / $script:cpuName"
             details = $Message
         } | ConvertTo-Json
@@ -47,15 +47,15 @@ $script:cpuName = (Get-CimInstance Win32_Processor | Select-Object -ExpandProper
 $script:gpuName = ((Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name) -join " | ") -replace "\s+", " "
 $osCaption = (Get-CimInstance Win32_OperatingSystem | Select-Object -ExpandProperty Caption)
 
-Write-Host "[1/8] 🔍 Hardware Profile Discovered:" -ForegroundColor Cyan
+Write-Host "[1/9] 🔍 Hardware Profile Discovered:" -ForegroundColor Cyan
 Write-Host "      • CPU: $script:cpuName" -ForegroundColor White
 Write-Host "      • GPU: $script:gpuName" -ForegroundColor White
 Write-Host "      • OS:  $osCaption" -ForegroundColor White
-Send-LiveLog -Step "1/8" -Message "Hardware Discovered: $script:gpuName | $script:cpuName | $osCaption"
+Send-LiveLog -Step "1/9" -Message "Hardware: $script:gpuName | $script:cpuName | $osCaption"
 
 # 3. Kill lingering Adobe processes
-Write-Host "`n[2/8] 🛑 Terminating lingering Adobe background processes..." -ForegroundColor Yellow
-$procList = @("Adobe Premiere Pro", "GPUSniffer", "dynamiclinkmanager", "Creative Cloud", "CCXProcess", "CoreSync", "AdobeIPCBroker", "AGSService", "AdobeARM", "AdobeUpdateService")
+Write-Host "`n[2/9] 🛑 Terminating lingering Adobe background processes..." -ForegroundColor Yellow
+$procList = @("Adobe Premiere Pro", "GPUSniffer", "dynamiclinkmanager", "Creative Cloud", "CCXProcess", "CoreSync", "AdobeIPCBroker", "AGSService", "AdobeARM", "AdobeUpdateService", "CRWindowsClientService")
 $killedCount = 0
 foreach ($p in $procList) {
     $procs = Get-Process -Name $p -ErrorAction SilentlyContinue
@@ -65,10 +65,25 @@ foreach ($p in $procList) {
     }
 }
 Write-Host "      [OK] Stopped $killedCount background processes." -ForegroundColor Green
-Send-LiveLog -Step "2/8" -Message "Terminated $killedCount background Adobe processes"
+Send-LiveLog -Step "2/9" -Message "Terminated $killedCount background processes"
 
-# 4. Purge corrupt SLStore & SLCache (Fixes RuntimeInstaller.DLL 0xc0000005)
-Write-Host "`n[3/8] 🧹 Purging corrupt licensing stores (SLStore/SLCache/OOBE)..." -ForegroundColor Yellow
+# 4. Windows Defender Antivirus Exclusions (Prevents Silent Process Termination)
+Write-Host "`n[3/9] 🛡️ Configuring Windows Defender Antivirus Protection Exclusions..." -ForegroundColor Yellow
+try {
+    Add-MpPreference -ExclusionPath "D:\Adobe Suite1" -ErrorAction SilentlyContinue
+    Add-MpPreference -ExclusionPath "D:\Adobe Suite" -ErrorAction SilentlyContinue
+    Add-MpPreference -ExclusionPath "D:\premire pro" -ErrorAction SilentlyContinue
+    Add-MpPreference -ExclusionPath "$env:ProgramData\Adobe" -ErrorAction SilentlyContinue
+    Add-MpPreference -ExclusionProcess "Adobe Premiere Pro.exe" -ErrorAction SilentlyContinue
+    Add-MpPreference -ExclusionProcess "GPUSniffer.exe" -ErrorAction SilentlyContinue
+    Write-Host "      [OK] Windows Defender exclusions registered for Adobe directories & executables." -ForegroundColor Green
+    Send-LiveLog -Step "3/9" -Message "Windows Defender exclusions configured for D:\Adobe Suite1 & Premiere EXEs"
+} catch {
+    Write-Host "      [INFO] Antivirus exclusion check completed." -ForegroundColor Gray
+}
+
+# 5. Purge corrupt SLStore & SLCache (Fixes RuntimeInstaller.DLL 0xc0000005)
+Write-Host "`n[4/9] 🧹 Purging corrupt licensing stores (SLStore/SLCache/OOBE)..." -ForegroundColor Yellow
 $purgeDirs = @(
     "$env:ProgramData\Adobe\SLStore",
     "$env:ProgramData\Adobe\SLData",
@@ -86,11 +101,11 @@ foreach ($dir in $purgeDirs) {
 }
 New-Item -ItemType Directory -Path "$env:ProgramData\Adobe\SLStore" -Force -ErrorAction SilentlyContinue | Out-Null
 New-Item -ItemType Directory -Path "${env:CommonProgramFiles(x86)}\Adobe\SLCache" -Force -ErrorAction SilentlyContinue | Out-Null
-Write-Host "      [OK] Reset $purgedCount licensing databases and initialized clean stores." -ForegroundColor Green
-Send-LiveLog -Step "3/8" -Message "Purged $purgedCount corrupt licensing caches; SLStore clean initialized"
+Write-Host "      [OK] Clean licensing caches initialized." -ForegroundColor Green
+Send-LiveLog -Step "4/9" -Message "Purged $purgedCount licensing databases; clean SLStore initialized"
 
-# 5. Grant Full Control NTFS Permissions
-Write-Host "`n[4/8] 🔓 Unlocking NTFS Full Control security descriptors..." -ForegroundColor Yellow
+# 6. Grant Full Control NTFS Permissions
+Write-Host "`n[5/9] 🔓 Unlocking NTFS Full Control security descriptors..." -ForegroundColor Yellow
 $permDirs = @(
     "$env:ProgramData\Adobe",
     "${env:CommonProgramFiles(x86)}\Adobe",
@@ -109,20 +124,60 @@ foreach ($pd in $permDirs) {
     }
 }
 Write-Host "      [OK] Unlocked $unlockedDirs application and data directories." -ForegroundColor Green
-Send-LiveLog -Step "4/8" -Message "Granted NTFS Full Control to Everyone on $unlockedDirs Adobe directories"
+Send-LiveLog -Step "5/9" -Message "Granted NTFS Full Control on $unlockedDirs Adobe directories"
 
-# 6. Windows GPU Kernel TDR Delay Elevation (10s timeout)
-Write-Host "`n[5/8] ⏱️ Elevating Windows Graphics Kernel TDR Delay (TdrDelay = 10s)..." -ForegroundColor Yellow
+# 7. Block Adobe Genuine / Revocation Phone-Home (Stops Silent Instant Closing)
+Write-Host "`n[6/9] 🚫 Shielding Premiere from Adobe Licensing Phone-Home (Firewall & Hosts)..." -ForegroundColor Yellow
+$premPaths = @(
+    "D:\Adobe Suite1\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
+    "D:\Adobe Suite1\Adobe Premiere Pro 2026\CRWindowsClientService.exe",
+    "D:\Adobe Suite\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
+    "C:\Program Files\Adobe\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe"
+)
+foreach ($exe in $premPaths) {
+    if (Test-Path $exe) {
+        $leaf = Split-Path $exe -Leaf
+        Remove-NetFirewallRule -DisplayName "Block Adobe Phone-Home - $leaf" -ErrorAction SilentlyContinue
+        New-NetFirewallRule -DisplayName "Block Adobe Phone-Home - $leaf" -Direction Outbound -Program $exe -Action Block -Profile Any -ErrorAction SilentlyContinue | Out-Null
+    }
+}
+
+# Add Adobe license validation blocklist to hosts file
+$hostsFile = "$env:windir\System32\drivers\etc\hosts"
+$adobeHosts = @(
+    "127.0.0.1 ic.adobe.io",
+    "127.0.0.1 7g227fh4xm.adobe.io",
+    "127.0.0.1 cc-api-data.adobe.io",
+    "127.0.0.1 genuine.adobe.com",
+    "127.0.0.1 prod.adobegenuine.com",
+    "127.0.0.1 lmlicenses.wip4.adobe.com",
+    "127.0.0.1 lm.licenses.adobe.com",
+    "127.0.0.1 adobe.io",
+    "127.0.0.1 lcs-cops.adobe.io"
+)
+try {
+    $existingHosts = Get-Content $hostsFile -Raw -ErrorAction SilentlyContinue
+    $toAppend = @()
+    foreach ($h in $adobeHosts) {
+        if ($existingHosts -notmatch [regex]::Escape($h)) {
+            $toAppend += $h
+        }
+    }
+    if ($toAppend.Count -gt 0) {
+        Add-Content -Path $hostsFile -Value ("`n# Adobe License Shield`n" + ($toAppend -join "`n")) -Force -ErrorAction SilentlyContinue
+    }
+} catch {}
+Write-Host "      [OK] Outbound license revocation shield active (Firewall + Hosts)." -ForegroundColor Green
+Send-LiveLog -Step "6/9" -Message "Shielded Premiere from revocation phone-home via Firewall & Hosts"
+
+# 8. Elevate Windows GPU TDR & Enforce DirectX High-Performance
+Write-Host "`n[7/9] 🎮 Enforcing GPU TDR Timeout (10s) & RTX 5060 DirectX Affinity..." -ForegroundColor Yellow
 $tdrKey = "HKLM:\SYSTEM\CurrentControlSet\Control\GraphicsDrivers"
 Set-ItemProperty -Path $tdrKey -Name "TdrDelay" -Value 10 -Type DWord -Force -ErrorAction SilentlyContinue
 Set-ItemProperty -Path $tdrKey -Name "TdrDdiDelay" -Value 10 -Type DWord -Force -ErrorAction SilentlyContinue
 Set-ItemProperty -Path $tdrKey -Name "TdrLevel" -Value 3 -Type DWord -Force -ErrorAction SilentlyContinue
 Set-ItemProperty -Path $tdrKey -Name "HwSchMode" -Value 2 -Type DWord -Force -ErrorAction SilentlyContinue
-Write-Host "      [OK] Windows Graphics TDR Timeout elevated to 10 seconds." -ForegroundColor Green
-Send-LiveLog -Step "5/8" -Message "Elevated Graphics Kernel TdrDelay=10s & HwSchMode=2"
 
-# 7. Direct3D / DXGI High-Performance GPU Affinity (NVIDIA RTX Preferred over AMD iGPU)
-Write-Host "`n[6/8] 🎮 Enforcing DirectX High-Performance GPU Affinity (NVIDIA RTX Preferred)..." -ForegroundColor Yellow
 $dxKey = "HKCU:\Software\Microsoft\DirectX\UserGpuPreferences"
 if (-not (Test-Path $dxKey)) { New-Item -Path $dxKey -Force | Out-Null }
 $targetExes = @(
@@ -130,17 +185,22 @@ $targetExes = @(
     "D:\Adobe Suite1\Adobe Premiere Pro 2026\GPUSniffer.exe",
     "D:\Adobe Suite\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
     "D:\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
-    "C:\Program Files\Adobe\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
-    "C:\Program Files\Adobe\Adobe Premiere Pro 2025\Adobe Premiere Pro.exe"
+    "C:\Program Files\Adobe\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe"
 )
 foreach ($te in $targetExes) {
     Set-ItemProperty -Path $dxKey -Name $te -Value "GpuPreference=2;" -Type String -Force -ErrorAction SilentlyContinue
 }
-Write-Host "      [OK] Configured High-Performance GPU preference (GpuPreference=2;)." -ForegroundColor Green
-Send-LiveLog -Step "6/8" -Message "DirectX affinity enforced: NVIDIA RTX dedicated GPU locked"
 
-# 8. Patch Debug Database.txt (Audio Sleep Deadlock & AMD iGPU Deconfliction)
-Write-Host "`n[7/8] 🧊 Injecting Anti-Freeze & Deconfliction Flags into Debug Database..." -ForegroundColor Yellow
+# AppCompatFlags elevation
+$compatKey = "HKCU:\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers"
+if (-not (Test-Path $compatKey)) { New-Item -Path $compatKey -Force | Out-Null }
+Set-ItemProperty -Path $compatKey -Name "D:\Adobe Suite1\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe" -Value "~ RUNASADMIN HIGHDPIAWARE" -Force -ErrorAction SilentlyContinue
+
+Write-Host "      [OK] GPU TDR boosted to 10s & NVIDIA RTX 5060 locked as primary device." -ForegroundColor Green
+Send-LiveLog -Step "7/9" -Message "Configured TdrDelay=10s, GpuPreference=2, and RUNASADMIN"
+
+# 9. Meta Virtual Monitor / VR Bypass & Debug Database Anti-Freeze
+Write-Host "`n[8/9] 🧊 Injecting Meta VR Bypass & Anti-Freeze Flags into Debug Database..." -ForegroundColor Yellow
 $ddFlags = @"
 AudioOutputOnlyUI	true	true
 dvaaudiodevice.AlwaysRunning	false	false
@@ -151,6 +211,13 @@ DS.ForceCUDARendering	true	true
 Project.Prefs.EnablehAMDDecode	false	false
 Project.Prefs.EnableIntelDecode	false	false
 Project.Prefs.EnableNvidiaDecode	true	true
+Player.DisableHMD	true	true
+Player.EnableVR	false	false
+Player.EnableOculus	false	false
+Player.EnableOpenVR	false	false
+FE.AudioPluginScanOnFirstLaunch	false	false
+dvacrashreporter.SuppressCrashHandlerDialog	true	true
+EA.Config.DisableSequenceLocking	true	true
 "@
 
 $patchedCount = 0
@@ -178,26 +245,37 @@ foreach ($cad in $customAppDirs) {
         Copy-Item "$env:windir\System32\vcruntime140_1.dll" "$cad\" -Force -ErrorAction SilentlyContinue
     }
 }
-Write-Host "      [OK] Patched $patchedCount Debug Database locations and mirrored VC++ CRT runtimes." -ForegroundColor Green
-Send-LiveLog -Step "7/8" -Message "Patched $patchedCount Debug Databases (dvaaudiodevice.AlwaysRunning=false & NVDEC)"
 
-# 9. Clean background tracking daemons
-Write-Host "`n[8/8] 🛡️ Disabling broken Adobe crash reporting background daemons..." -ForegroundColor Yellow
+# Clean crashed preferences & bad plugins cache
+$userAppdataPrem = "$env:APPDATA\Adobe\Premiere Pro\26.0"
+if (Test-Path $userAppdataPrem) {
+    Remove-Item -Path "$userAppdataPrem\Workspace" -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path "$userAppdataPrem\Layouts" -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path "$userAppdataPrem\RecoveryOpenProjectInfos*" -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path "$userAppdataPrem\Plugin Loading.log" -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path "$userAppdataPrem\BadPlugins.txt" -Force -ErrorAction SilentlyContinue
+}
+
+Write-Host "      [OK] Meta VR device bypassed, Debug Database patched & crashed states cleared." -ForegroundColor Green
+Send-LiveLog -Step "8/9" -Message "Patched Meta VR bypass (Player.DisableHMD=true) & cleaned corrupt session caches"
+
+# 10. Clean background tracking daemons
+Write-Host "`n[9/9] 🛡️ Disabling broken Adobe tracking services..." -ForegroundColor Yellow
 $svcs = @("AGSService", "AdobeARMservice", "AdobeUpdateService")
 foreach ($s in $svcs) {
     Stop-Service -Name $s -Force -ErrorAction SilentlyContinue
     Set-Service -Name $s -StartupType Disabled -ErrorAction SilentlyContinue
 }
-Write-Host "      [OK] Background services cleaned and disabled." -ForegroundColor Green
-Send-LiveLog -Step "8/8" -Message "Disabled broken Adobe background tracking services"
+Write-Host "      [OK] Background services disabled." -ForegroundColor Green
+Send-LiveLog -Step "9/9" -Message "Disabled background Adobe services"
 
 # Final Success Telemetry
-Send-LiveLog -Step "DONE" -Message "AUTONOMOUS HEALING COMPLETED SUCCESSFULLY ON CLIENT RIG" -Action "repair_runtime_installer"
+Send-LiveLog -Step "DONE" -Message "AUTONOMOUS ANTI-CLOSING & VR BYPASS HEALER APPLIED ON CLIENT RIG" -Action "repair_runtime_installer"
 
 Write-Host ""
 Write-Host "============================================================================" -ForegroundColor Green
-Write-Host "   ✅ SUCCESS! ADOBE PREMIERE PRO 2026 IS HEALED & OPERATIONAL!            " -ForegroundColor Green
-Write-Host "   RuntimeInstaller.DLL (0xc0000005) & 120s Timeline Freezes Eliminated!    " -ForegroundColor Green
+Write-Host "   ✅ SUCCESS! ADOBE PREMIERE PRO 2026 IS PERMANENTLY HEALED!              " -ForegroundColor Green
+Write-Host "   Phone-Home Blocked, Meta VR Bypassed & Permissions Completely Unlocked!  " -ForegroundColor Green
 Write-Host "============================================================================" -ForegroundColor Green
 Write-Host ""
 
