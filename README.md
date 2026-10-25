@@ -9,7 +9,7 @@
 ## 🔗 Σύνδεσμοι Έργου & Direct Download
 * 🚀 **Επίσημο Web Live Landing Page (Vercel):** [**https://premiere-pro-doctor.vercel.app**](https://premiere-pro-doctor.vercel.app)
 * 🌐 **GitHub Pages Mirror:** [**https://zupa212.github.io/adobe-master-crash-doctor/**](https://zupa212.github.io/adobe-master-crash-doctor/)
-* **⚡ Άμεσο Download Εφαρμογής (.EXE):** [**Adobe Master Crash Doctor.exe**](https://github.com/zupa212/adobe-master-crash-doctor/raw/main/Adobe%20Master%20Crash%20Doctor.exe) *(24 MB - v1.2.2 - Zero Python Required)*
+* **⚡ Άμεσο Download Εφαρμογής (.EXE):** [**Adobe Master Crash Doctor.exe**](https://github.com/zupa212/adobe-master-crash-doctor/raw/main/Adobe%20Master%20Crash%20Doctor.exe) *(24 MB - v1.2.4 - Zero Python Required)*
 * **🎬 Άμεσο Download Premiere Launcher (.EXE):** [**Adobe Premiere Pro (Repaired).exe**](https://github.com/zupa212/adobe-master-crash-doctor/raw/main/Adobe%20Premiere%20Pro%20(Repaired).exe) *(8.4 MB)*
 * **📁 Προβολή Αρχείων στο Main Branch:** [https://github.com/zupa212/adobe-master-crash-doctor/tree/main](https://github.com/zupa212/adobe-master-crash-doctor/tree/main)
 * **📦 Πλήρες Αρχείο ZIP (Περιέχει και τα .EXE):** [Download Repository ZIP](https://github.com/zupa212/adobe-master-crash-doctor/archive/refs/heads/main.zip)
@@ -164,3 +164,22 @@
 * **Αυτόματος Έλεγχος στο Παρασκήνιο:** Ελέγχει αυτόματα στο GitHub (`version.json` & GitHub Releases API) κατά την εκκίνηση.
 * **1-Click In-App Update:** Όταν κυκλοφορεί νέα έκδοση ή επιδιορθώσεις, εμφανίζει ένδειξη και επιτρέπει άμεση λήψη και εγκατάσταση με 1 κλικ μέσα από το GUI χωρίς να χρειάζεται χειροκίνητο download από browser.
 * **Ασφαλής Επανεκκίνηση:** Χρησιμοποιεί detached background updater script για ασφαλή αντικατάσταση του εκτελέσιμου αρχείου και αυτόματη επανεκκίνηση της νέας έκδοσης!
+
+---
+
+### 8. 🧠 Claude Opus 5.5 Max Deep Registry Auto-Healer (RTX 5060 + AMD Ryzen 5)
+Η έκδοση **v1.2.4 (Build 124)** ενσωματώνει προηγμένη αρχιτεκτονική διάγνωση και αποκατάσταση Windows Registry εμπνευσμένη από το Claude Opus 5.5 Max:
+* **Dual-Model / Live API & Embedded Gold Master:** Επικοινωνεί σε πραγματικό χρόνο με το Claude Opus 5.5 API (μέσω τοπικού LLMsRelay Gateway) ή εκτελεί αυτόνομα το προ-ενσωματωμένο **Opus 5.5 Gold Master Architecture Matrix** σε οποιοδήποτε απομακρυσμένο μηχάνημα χωρίς δίκτυο!
+* **NVIDIA RTX 5060 (Blackwell Architecture) Optimization:**
+  - Ρύθμιση Windows GraphicsDrivers TDR Delay σε 10s (`TdrDelay=10`, `TdrDdiDelay=10`, `TdrLevel=3`, `HwSchMode=2`).
+  - Παράκαμψη Blackwell sniffer timeout: `DS.GPUSnifferOverride=0 0`, `Player.DirectXAcceleratedRenderer=true true`, `DS.ForceCUDARendering=true true`.
+* **AMD Ryzen 5 Dual-GPU Memory Bus Deconfliction:**
+  - Απενεργοποίηση AMD Radeon integrated GPU decode (`Project.Prefs.EnablehAMDDecode=false`) για αποτροπή memory collisions.
+  - Ενεργοποίηση αποκλειστικού NVIDIA NVDEC hardware decoding (`Project.Prefs.EnableNvidiaDecode=true`).
+* **Broken CLSID Namespace Sanitization:**
+  - Εξάλειψη ορφανών shell extensions (`HKCR\CLSID`) που προκαλούν κρασαρίσματα στον Windows Explorer και `0xc0000005` στο `RuntimeInstaller.DLL`.
+
+---
+
+### 9. 🔥 1-Click Nuclear Driver & Service Uninstaller
+Ολοκληρωτική διαγραφή όλων των Adobe drivers, background services (`AGSService`, `AdobeARMservice`, `AdobeUpdateService`), scheduled tasks, startup registry keys, Windows Credential tokens, registry roots (`HKLM\SOFTWARE\Adobe`, `HKCU\Software\Adobe`, `WOW6432Node`) και φακέλων αδειών. Επαναφέρει το PC σε 100% καθαρή εργοστασιακή κατάσταση!

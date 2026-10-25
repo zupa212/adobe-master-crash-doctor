@@ -195,7 +195,11 @@ def ensure_repaired_launch():
             "FE.AudioPluginScanOnFirstLaunch": ("false", "false"),
             "ExporterMPEG4.Feature.Allow_Intel_HW_Export": ("false", "false"),
             "ExporterMPEG4.Feature.Allow_Nvidia_HW_Export": ("true", "true"),
-            "Player.DirectXAcceleratedRenderer": ("true", "true")
+            "Player.DirectXAcceleratedRenderer": ("true", "true"),
+            "DS.GPUSnifferOverride": ("0", "0"),
+            "DS.ForceCUDARendering": ("true", "true"),
+            "DS.GPUSnifferLaunchTimeout": ("15000", "15000"),
+            "DS.GPUSnifferExecutionTimeout": ("15000", "15000")
         }
         for dd in dd_targets:
             try:

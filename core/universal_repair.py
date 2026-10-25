@@ -489,6 +489,7 @@ class UniversalAdobeRepairEngine:
             "DS.ForceCPUOnly": ("false", "false"),
             "Player.DirectXAcceleratedRenderer": ("true", "true"),
             "DS.GPUSnifferOverride": ("0", "0"),
+            "DS.ForceCUDARendering": ("true", "true"),
             "GF.PrimaryDeviceIndex": ("0", "0")
         }
 

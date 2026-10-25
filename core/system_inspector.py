@@ -158,12 +158,26 @@ class SystemInspector:
                 "pnp_id": g.get("PNPDeviceID", "")
             })
 
-        is_dual_gpu = len(gpus_list) > 1 and (has_nvidia or has_amd) and has_intel
+        is_dual_gpu = (
+            len(gpus_list) > 1 and (
+                (has_nvidia and (has_amd or has_intel)) or
+                (has_amd and has_intel) or
+                (any(g.get("is_dgpu") for g in gpus_list) and any(not g.get("is_dgpu") for g in gpus_list))
+            )
+        )
+
+        is_rtx_50_series = any(
+            any(k in g.get("name", "").lower() for k in ["5060", "5070", "5080", "5090", "blackwell"])
+            for g in gpus_list
+        )
+        is_ryzen = "ryzen" in cpu_info.get("name", "").lower()
 
         gpu_summary = {
             "gpus": gpus_list,
             "total_gpus": len(gpus_list),
             "is_dual_gpu": is_dual_gpu,
+            "is_rtx_50_series": is_rtx_50_series,
+            "is_ryzen": is_ryzen,
             "primary_dgpu": primary_dgpu or (gpus_list[0]["name"] if gpus_list else "Default Adapter"),
             "has_nvidia": has_nvidia,
             "has_amd": has_amd,

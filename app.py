@@ -33,6 +33,7 @@ from core.nuclear_purge import NuclearPurgeEngine
 from core.adobe_cc_cleaner import AdobeCreativeCloudCleaner
 from core.system_inspector import SystemInspector
 from core.adobe_catalog import ADOBE_APPS_CATALOG
+from core.deep_registry_healer import DeepRegistryHealer
 from core.ota_updater import OTAUpdateEngine, CURRENT_VERSION, CURRENT_BUILD
 
 class AdobeMasterDoctorApp(ctk.CTk):
@@ -57,6 +58,7 @@ class AdobeMasterDoctorApp(ctk.CTk):
         self.scanner = MultiDiskScanner(self.logger)
         self.nuclear = NuclearPurgeEngine(self.logger)
         self.cc_cleaner = AdobeCreativeCloudCleaner(self.logger)
+        self.deep_healer = DeepRegistryHealer(self.logger)
         self.inspector = SystemInspector(self.logger)
 
         self.diag_data = None
@@ -137,7 +139,31 @@ class AdobeMasterDoctorApp(ctk.CTk):
             hover_color="#0369a1",
             height=36
         )
-        self.btn_side_freeze.grid(row=3, column=0, padx=15, pady=(0, 15), sticky="ew")
+        self.btn_side_freeze.grid(row=3, column=0, padx=15, pady=(0, 6), sticky="ew")
+
+        # Claude Opus 5.5 Max Deep Registry Healer (RTX 5060 + Ryzen 5)
+        self.btn_side_opus = ctk.CTkButton(
+            self.sidebar_frame,
+            text="🧠 OPUS 5.5 REGISTRY HEALER",
+            command=self.run_opus_deep_healer_thread,
+            font=ctk.CTkFont(size=12, weight="bold"),
+            fg_color="#7c3aed",
+            hover_color="#6d28d9",
+            height=36
+        )
+        self.btn_side_opus.grid(row=4, column=0, padx=15, pady=(0, 6), sticky="ew")
+
+        # Nuclear Driver & Service Purge
+        self.btn_side_nuclear = ctk.CTkButton(
+            self.sidebar_frame,
+            text="🔥 NUCLEAR DRIVER PURGE",
+            command=self.run_nuclear_driver_purge_thread,
+            font=ctk.CTkFont(size=12, weight="bold"),
+            fg_color="#b91c1c",
+            hover_color="#991b1b",
+            height=36
+        )
+        self.btn_side_nuclear.grid(row=5, column=0, padx=15, pady=(0, 15), sticky="ew")
 
         # Sidebar navigation buttons
         self.btn_nav_diag = ctk.CTkButton(
@@ -147,7 +173,7 @@ class AdobeMasterDoctorApp(ctk.CTk):
             fg_color="#1e293b",
             hover_color="#334155"
         )
-        self.btn_nav_diag.grid(row=4, column=0, padx=15, pady=5, sticky="ew")
+        self.btn_nav_diag.grid(row=6, column=0, padx=15, pady=5, sticky="ew")
 
         self.btn_nav_fix = ctk.CTkButton(
             self.sidebar_frame,
@@ -156,7 +182,7 @@ class AdobeMasterDoctorApp(ctk.CTk):
             fg_color="#1e293b",
             hover_color="#334155"
         )
-        self.btn_nav_fix.grid(row=5, column=0, padx=15, pady=5, sticky="ew")
+        self.btn_nav_fix.grid(row=7, column=0, padx=15, pady=5, sticky="ew")
 
         self.btn_nav_apps = ctk.CTkButton(
             self.sidebar_frame,
@@ -165,7 +191,7 @@ class AdobeMasterDoctorApp(ctk.CTk):
             fg_color="#1e293b",
             hover_color="#334155"
         )
-        self.btn_nav_apps.grid(row=6, column=0, padx=15, pady=5, sticky="ew")
+        self.btn_nav_apps.grid(row=8, column=0, padx=15, pady=5, sticky="ew")
 
         self.btn_nav_nuclear = ctk.CTkButton(
             self.sidebar_frame,
@@ -174,7 +200,7 @@ class AdobeMasterDoctorApp(ctk.CTk):
             fg_color="#1e293b",
             hover_color="#334155"
         )
-        self.btn_nav_nuclear.grid(row=7, column=0, padx=15, pady=5, sticky="ew")
+        self.btn_nav_nuclear.grid(row=9, column=0, padx=15, pady=5, sticky="ew")
 
         self.btn_nav_versions = ctk.CTkButton(
             self.sidebar_frame,
@@ -183,7 +209,7 @@ class AdobeMasterDoctorApp(ctk.CTk):
             fg_color="#1e293b",
             hover_color="#334155"
         )
-        self.btn_nav_versions.grid(row=8, column=0, padx=15, pady=5, sticky="ew")
+        self.btn_nav_versions.grid(row=10, column=0, padx=15, pady=5, sticky="ew")
 
         self.btn_nav_console = ctk.CTkButton(
             self.sidebar_frame,
@@ -192,11 +218,11 @@ class AdobeMasterDoctorApp(ctk.CTk):
             fg_color="#1e293b",
             hover_color="#334155"
         )
-        self.btn_nav_console.grid(row=9, column=0, padx=15, pady=5, sticky="ew")
+        self.btn_nav_console.grid(row=11, column=0, padx=15, pady=5, sticky="ew")
 
         # OTA Auto-Updater Section in Sidebar
         self.ota_card = ctk.CTkFrame(self.sidebar_frame, fg_color="#1e293b", corner_radius=8, border_color="#38bdf8", border_width=1)
-        self.ota_card.grid(row=10, column=0, padx=15, pady=(10, 4), sticky="ew")
+        self.ota_card.grid(row=12, column=0, padx=15, pady=(10, 4), sticky="ew")
 
         self.lbl_ota_status = ctk.CTkLabel(
             self.ota_card,
@@ -225,7 +251,7 @@ class AdobeMasterDoctorApp(ctk.CTk):
             fg_color="#0284c7",
             hover_color="#0369a1"
         )
-        self.btn_rescan.grid(row=11, column=0, padx=15, pady=8, sticky="ew")
+        self.btn_rescan.grid(row=13, column=0, padx=15, pady=8, sticky="ew")
 
         # Creator tag in sidebar
         lbl_creator = ctk.CTkLabel(
@@ -234,7 +260,7 @@ class AdobeMasterDoctorApp(ctk.CTk):
             font=ctk.CTkFont(size=10),
             text_color="#64748b"
         )
-        lbl_creator.grid(row=12, column=0, padx=15, pady=(0, 15))
+        lbl_creator.grid(row=14, column=0, padx=15, pady=(0, 15))
 
         # ---------------- CONTENT CONTAINER ---------------- #
         self.content_container = ctk.CTkFrame(self, corner_radius=10, fg_color="#0f172a")
@@ -679,58 +705,128 @@ class AdobeMasterDoctorApp(ctk.CTk):
         self.frame_nuclear = ctk.CTkScrollableFrame(self.content_container, fg_color="transparent")
         self.frame_nuclear.grid_columnconfigure(0, weight=1)
 
-        # CC Root Uninstaller Banner
-        cc_banner = ctk.CTkFrame(self.frame_nuclear, fg_color="#450a0a", corner_radius=10, border_color="#ef4444", border_width=1)
-        cc_banner.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
+        # ---------------- CLAUDE OPUS 5.5 MAX DEEP REGISTRY HEALER BANNER ---------------- #
+        opus_banner = ctk.CTkFrame(self.frame_nuclear, fg_color="#2e1065", corner_radius=10, border_color="#8b5cf6", border_width=1.5)
+        opus_banner.grid(row=0, column=0, padx=10, pady=(10, 8), sticky="ew")
 
-        cc_title = ctk.CTkLabel(cc_banner, text="🗑️ Adobe Creative Cloud Root Uninstaller & Service Cleaner", font=ctk.CTkFont(size=20, weight="bold"), text_color="#ffffff")
-        cc_title.pack(padx=20, pady=(15, 5), anchor="w")
+        opus_title = ctk.CTkLabel(
+            opus_banner,
+            text="🧠 Claude Opus 5.5 Max Deep Registry Auto-Healer (RTX 5060 + Ryzen 5)",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color="#c4b5fd"
+        )
+        opus_title.pack(padx=20, pady=(15, 4), anchor="w")
+
+        opus_desc = ctk.CTkLabel(
+            opus_banner,
+            text="Αρχιτεκτονική διάγνωση & χειρουργική αποκατάσταση Registry μέσω Claude Opus 5.5 Max (Live API ή Embedded Gold Master Matrix):\n"
+                 "• Αυτόματη ρύθμιση Windows GraphicsDrivers TDR Delay σε 10s (TdrDelay=10, TdrDdiDelay=10, HwSchMode=2) για την RTX 5060 Blackwell.\n"
+                 "• Επίλυση διένεξης Dual-GPU: Απενεργοποίηση AMD Radeon iGPU decode (Ryzen 5) & ενεργοποίηση NVDEC CUDA hardware acceleration.\n"
+                 "• Επιβολή DirectX User GpuPreferences=2; (High-Performance GPU) σε όλα τα Adobe executables & GPUSniffer.\n"
+                 "• Εξάλειψη broken CLSID namespace shell extensions που προκαλούν 0xc0000005 στο RuntimeInstaller.DLL.",
+            font=ctk.CTkFont(size=12),
+            text_color="#ddd6fe",
+            wraplength=720,
+            justify="left"
+        )
+        opus_desc.pack(padx=20, pady=(0, 12), anchor="w")
+
+        self.btn_opus_run = ctk.CTkButton(
+            opus_banner,
+            text="🧠 ΕΚΤΕΛΕΣΗ CLAUDE OPUS 5.5 DEEP REGISTRY HEALING (RTX 5060 + RYZEN 5)",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            fg_color="#7c3aed",
+            hover_color="#6d28d9",
+            height=44,
+            command=self.run_opus_deep_healer_thread
+        )
+        self.btn_opus_run.pack(padx=20, pady=(0, 16), fill="x")
+
+        # ---------------- NUCLEAR ADOBE DRIVERS & SERVICES PURGE BANNER ---------------- #
+        driver_banner = ctk.CTkFrame(self.frame_nuclear, fg_color="#450a0a", corner_radius=10, border_color="#ef4444", border_width=1.5)
+        driver_banner.grid(row=1, column=0, padx=10, pady=(0, 8), sticky="ew")
+
+        driver_title = ctk.CTkLabel(
+            driver_banner,
+            text="🔥 1-Click Nuclear Driver & Service Uninstaller (All Adobe Drivers, Services & Tasks)",
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color="#fca5a5"
+        )
+        driver_title.pack(padx=20, pady=(15, 4), anchor="w")
+
+        driver_desc = ctk.CTkLabel(
+            driver_banner,
+            text="Ολοκληρωτική διαγραφή όλων των Adobe drivers, background services (AGSService, AdobeARMservice, AdobeUpdateService), "
+                 "scheduled tasks, startup keys, Windows Credential tokens, registry roots και φακέλων αδειών. "
+                 "Καθαρίζει το σύστημα στο 100% σαν να μην εγκαταστάθηκε ποτέ η Adobe!",
+            font=ctk.CTkFont(size=12),
+            text_color="#fecaca",
+            wraplength=720,
+            justify="left"
+        )
+        driver_desc.pack(padx=20, pady=(0, 12), anchor="w")
+
+        self.btn_driver_purge = ctk.CTkButton(
+            driver_banner,
+            text="🔥 WIPE ALL ADOBE DRIVERS, SERVICES & REGISTRY (NUCLEAR UNINSTALL)",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            fg_color="#b91c1c",
+            hover_color="#991b1b",
+            height=44,
+            command=self.run_nuclear_driver_purge_thread
+        )
+        self.btn_driver_purge.pack(padx=20, pady=(0, 16), fill="x")
+
+        # CC Root Uninstaller Banner
+        cc_banner = ctk.CTkFrame(self.frame_nuclear, fg_color="#1e1b4b", corner_radius=10, border_color="#6366f1", border_width=1)
+        cc_banner.grid(row=2, column=0, padx=10, pady=(0, 8), sticky="ew")
+
+        cc_title = ctk.CTkLabel(cc_banner, text="🗑️ Adobe Creative Cloud Root Uninstaller & Tool", font=ctk.CTkFont(size=16, weight="bold"), text_color="#ffffff")
+        cc_title.pack(padx=20, pady=(12, 4), anchor="w")
 
         cc_desc = ctk.CTkLabel(
             cc_banner,
-            text="Πλήρης απεγκατάσταση Creative Cloud Desktop, τερματισμός και διαγραφή Windows Services "
-                 "(AdobeUpdateService, AGSService, AdobeARMservice), αφαίρεση background Scheduled Tasks, εκτέλεση του επίσημου Adobe Cleaner Tool "
-                 "και καθαρισμός όλων των καταλοίπων OOBE, SLStore, SLData και Program Files.",
-            font=ctk.CTkFont(size=12), text_color="#fecaca", wraplength=700, justify="left"
+            text="Εκτέλεση του επίσημου Adobe Creative Cloud Cleaner Tool σε συνδυασμό με το local uninstaller utility.",
+            font=ctk.CTkFont(size=12), text_color="#c7d2fe", wraplength=700, justify="left"
         )
-        cc_desc.pack(padx=20, pady=(0, 15), anchor="w")
+        cc_desc.pack(padx=20, pady=(0, 10), anchor="w")
 
         self.btn_cc_uninstall = ctk.CTkButton(
             cc_banner,
-            text="🗑️ UNINSTALL CREATIVE CLOUD & WIPE ALL SERVICES (ΠΛΗΡΗΣ ΑΠΕΓΚΑΤΑΣΤΑΣΗ CC)",
-            font=ctk.CTkFont(size=14, weight="bold"),
-            fg_color="#b91c1c", hover_color="#991b1b", height=44,
+            text="🗑️ UNINSTALL CREATIVE CLOUD DESKTOP ONLY",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            fg_color="#4f46e5", hover_color="#4338ca", height=38,
             command=self.run_cc_uninstaller_thread
         )
-        self.btn_cc_uninstall.pack(padx=20, pady=(0, 18), fill="x")
+        self.btn_cc_uninstall.pack(padx=20, pady=(0, 14), fill="x")
 
         # Nuclear Purge Banner
-        n_banner = ctk.CTkFrame(self.frame_nuclear, fg_color="#7f1d1d", corner_radius=10)
-        n_banner.grid(row=1, column=0, padx=10, pady=10, sticky="ew")
+        n_banner = ctk.CTkFrame(self.frame_nuclear, fg_color="#1e293b", corner_radius=10)
+        n_banner.grid(row=3, column=0, padx=10, pady=(0, 8), sticky="ew")
 
-        n_title = ctk.CTkLabel(n_banner, text="🔥 Complete Nuclear Root Purge (Καθαρισμός Μέχρι τη Ρίζα)", font=ctk.CTkFont(size=18, weight="bold"), text_color="#ffffff")
-        n_title.pack(padx=20, pady=(15, 5), anchor="w")
+        n_title = ctk.CTkLabel(n_banner, text="🧹 Sanitization Root Purge (Firewall, Credentials & Caches)", font=ctk.CTkFont(size=16, weight="bold"), text_color="#ffffff")
+        n_title.pack(padx=20, pady=(12, 4), anchor="w")
 
         n_desc = ctk.CTkLabel(
             n_banner,
             text="Σαρώνει και καθαρίζει: Windows Firewall rules (loopback socket access), "
-                 "Windows Credential Manager (απαλοιφή stale licensing tokens), Multi-Drive Caches σε όλους τους δίσκους και Registry MRU / Layouts.",
-            font=ctk.CTkFont(size=12), text_color="#fecaca", wraplength=700, justify="left"
+                 "Windows Credential Manager (απαλοιφή stale licensing tokens) και Multi-Drive Caches σε όλους τους δίσκους.",
+            font=ctk.CTkFont(size=12), text_color="#cbd5e1", wraplength=700, justify="left"
         )
-        n_desc.pack(padx=20, pady=(0, 15), anchor="w")
+        n_desc.pack(padx=20, pady=(0, 10), anchor="w")
 
         self.btn_nuclear_run = ctk.CTkButton(
             n_banner,
-            text="🔥 ΕΚΤΕΛΕΣΗ ΠΛΗΡΟΥΣ ΚΑΘΑΡΙΣΜΟΥ ΡΙΖΑΣ (FIREWALL, CREDENTIALS, CACHES)",
+            text="🧹 ΕΚΤΕΛΕΣΗ ΚΑΘΑΡΙΣΜΟΥ ΡΙΖΑΣ (FIREWALL, CREDENTIALS, CACHES)",
             font=ctk.CTkFont(size=13, weight="bold"),
-            fg_color="#dc2626", hover_color="#b91c1c", height=40,
+            fg_color="#334155", hover_color="#475569", height=38,
             command=self.run_nuclear_purge_thread
         )
-        self.btn_nuclear_run.pack(padx=20, pady=(0, 18), fill="x")
+        self.btn_nuclear_run.pack(padx=20, pady=(0, 14), fill="x")
 
         # Telemetry info
         self.cc_info_frame = ctk.CTkFrame(self.frame_nuclear, fg_color="#1e293b", corner_radius=8)
-        self.cc_info_frame.grid(row=2, column=0, padx=10, pady=5, sticky="ew")
+        self.cc_info_frame.grid(row=4, column=0, padx=10, pady=5, sticky="ew")
 
         lbl_inf_t = ctk.CTkLabel(self.cc_info_frame, text="Creative Cloud Machine Telemetry:", font=ctk.CTkFont(size=13, weight="bold"), text_color="#38bdf8")
         lbl_inf_t.pack(padx=15, pady=(12, 4), anchor="w")
@@ -1146,6 +1242,86 @@ class AdobeMasterDoctorApp(ctk.CTk):
                 self.logger.error(f"Error during nuclear purge: {e}")
             finally:
                 self.after(0, lambda: self.btn_nuclear_run.configure(state="normal", text="🔥 ΕΚΤΕΛΕΣΗ ΠΛΗΡΟΥΣ ΚΑΘΑΡΙΣΜΟΥ ΡΙΖΑΣ (FIREWALL, CREDENTIALS, CACHES)"))
+                self.run_diagnostics_thread()
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def run_opus_deep_healer_thread(self):
+        self.select_frame("console")
+        if hasattr(self, "btn_opus_run"):
+            self.btn_opus_run.configure(state="disabled", text="ΕΚΤΕΛΕΣΗ OPUS 5.5 HEALER... (RUNNING)")
+        if hasattr(self, "btn_side_opus"):
+            self.btn_side_opus.configure(state="disabled", text="HEALING...")
+        self.logger.info("Initiating Claude Opus 5.5 Max Deep Registry & Architecture Healer...")
+
+        def _worker():
+            try:
+                sys_telemetry = self.inspector.inspect_complete_system()
+                res = self.deep_healer.execute_complete_deep_healing(sys_telemetry)
+                opus_info = res.get("opus_result", {})
+                is_live = opus_info.get("live_consultation", False)
+                source_str = "Live Claude Opus 5.5 API Gateway" if is_live else "Embedded Opus 5.5 Gold Master Matrix"
+                summary_msg = (
+                    f"Claude Opus 5.5 Max Deep Registry Healing Complete!\n\n"
+                    f"• Strategy Source: {source_str}\n"
+                    f"• Windows Graphics TDR Delay: Boosted to 10s (HwSchMode=2 Blackwell Ready)\n"
+                    f"• DirectX High-Perf GPU Affinity: Enforced across {res['gpu_affinities_enforced']} Adobe binaries\n"
+                    f"• Debug Database Anti-Deadlock Flags: Injected in {res['debug_databases_patched']} locations\n"
+                    f"• Preferences & Ryzen Dual-GPU: Deconflicted in {res['preferences_deconflicted']} files\n"
+                    f"• Broken CLSID Shell Extensions: Sanitized {res['clsids_sanitized']} keys\n\n"
+                    f"Directive Preview:\n{opus_info.get('opus_analysis', '')[:250]}..."
+                )
+                self.after(0, lambda: messagebox.showinfo("Claude Opus 5.5 Deep Healing", summary_msg))
+            except Exception as e:
+                self.logger.error(f"Error during Claude Opus 5.5 deep healing: {e}")
+            finally:
+                if hasattr(self, "btn_opus_run"):
+                    self.after(0, lambda: self.btn_opus_run.configure(state="normal", text="🧠 ΕΚΤΕΛΕΣΗ CLAUDE OPUS 5.5 DEEP REGISTRY HEALING (RTX 5060 + RYZEN 5)"))
+                if hasattr(self, "btn_side_opus"):
+                    self.after(0, lambda: self.btn_side_opus.configure(state="normal", text="🧠 OPUS 5.5 REGISTRY HEALER"))
+                self.run_diagnostics_thread()
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def run_nuclear_driver_purge_thread(self):
+        confirm = messagebox.askyesno(
+            "Επιβεβαίωση Nuclear Driver & Service Purge",
+            "ΠΡΟΣΟΧΗ: Αυτή η λειτουργία θα τερματίσει και θα διαγράψει ΟΛΟΥΣ τους Adobe drivers, "
+            "όλα τα background services (AGSService, AdobeARMservice, AdobeUpdateService), scheduled tasks, "
+            "startup keys, registry roots και αρχεία αδειών.\n\n"
+            "Επιθυμείτε να προχωρήσετε στον ολοκληρωτικό καθαρισμό;"
+        )
+        if not confirm:
+            return
+
+        self.select_frame("console")
+        if hasattr(self, "btn_driver_purge"):
+            self.btn_driver_purge.configure(state="disabled", text="WIPING ALL ADOBE DRIVERS & SERVICES...")
+        if hasattr(self, "btn_side_nuclear"):
+            self.btn_side_nuclear.configure(state="disabled", text="PURGING...")
+        self.logger.info("Executing 1-Click Nuclear Adobe Driver & Service Purge...")
+
+        def _worker():
+            try:
+                res = self.deep_healer.execute_complete_nuclear_purge()
+                self.after(0, lambda: messagebox.showinfo(
+                    "Nuclear Purge Complete",
+                    f"Ολοκληρωτικός καθαρισμός Adobe ολοκληρώθηκε!\n\n"
+                    f"• Processes Killed: {res['processes_killed']}\n"
+                    f"• Windows Services Deleted: {len(res['services_deleted'])}\n"
+                    f"• Scheduled Tasks Removed: {res['tasks_removed']}\n"
+                    f"• Startup Keys Removed: {res['startup_keys_removed']}\n"
+                    f"• Credential Tokens Purged: {res['credentials_purged']}\n"
+                    f"• Broken CLSIDs Unhooked: {res['clsids_unhooked']}\n"
+                    f"• Licensing Directories Wiped: {res['directories_wiped']}"
+                ))
+            except Exception as e:
+                self.logger.error(f"Error during nuclear driver purge: {e}")
+            finally:
+                if hasattr(self, "btn_driver_purge"):
+                    self.after(0, lambda: self.btn_driver_purge.configure(state="normal", text="🔥 WIPE ALL ADOBE DRIVERS, SERVICES & REGISTRY (NUCLEAR UNINSTALL)"))
+                if hasattr(self, "btn_side_nuclear"):
+                    self.after(0, lambda: self.btn_side_nuclear.configure(state="normal", text="🔥 NUCLEAR DRIVER PURGE"))
                 self.run_diagnostics_thread()
 
         threading.Thread(target=_worker, daemon=True).start()
