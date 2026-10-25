@@ -7,8 +7,9 @@
 ---
 
 ## 🔗 Σύνδεσμοι Έργου & Direct Download
-* **⚡ Άμεσο Download Εφαρμογής από το Repo (.EXE):** [**Adobe Master Crash Doctor.exe**](https://github.com/zupa212/adobe-master-crash-doctor/raw/main/Adobe%20Master%20Crash%20Doctor.exe) *(23.5 MB - Zero Python Required)*
-* **🎬 Άμεσο Download Premiere Launcher (.EXE):** [**Adobe Premiere Pro (Repaired).exe**](https://github.com/zupa212/adobe-master-crash-doctor/raw/main/Adobe%20Premiere%20Pro%20(Repaired).exe) *(8.2 MB)*
+* 🌐 **Επίσημο Web Showcase & Landing Page:** [**https://zupa212.github.io/adobe-master-crash-doctor/**](https://zupa212.github.io/adobe-master-crash-doctor/) *(Ή ανοίξτε απευθείας το [index.html](index.html))*
+* **⚡ Άμεσο Download Εφαρμογής από το Repo (.EXE):** [**Adobe Master Crash Doctor.exe**](https://github.com/zupa212/adobe-master-crash-doctor/raw/main/Adobe%20Master%20Crash%20Doctor.exe) *(24 MB - v1.2.2 - Zero Python Required)*
+* **🎬 Άμεσο Download Premiere Launcher (.EXE):** [**Adobe Premiere Pro (Repaired).exe**](https://github.com/zupa212/adobe-master-crash-doctor/raw/main/Adobe%20Premiere%20Pro%20(Repaired).exe) *(8.4 MB)*
 * **📁 Προβολή Αρχείων στο Main Branch:** [https://github.com/zupa212/adobe-master-crash-doctor/tree/main](https://github.com/zupa212/adobe-master-crash-doctor/tree/main)
 * **📦 Πλήρες Αρχείο ZIP (Περιέχει και τα .EXE):** [Download Repository ZIP](https://github.com/zupa212/adobe-master-crash-doctor/archive/refs/heads/main.zip)
 * **⚡ Git Clone Command:**
