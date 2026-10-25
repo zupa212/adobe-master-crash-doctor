@@ -40,7 +40,7 @@ class SystemInspector:
                 }
                 [PSCustomObject]@{
                     Name = $_.DeviceID
-                    Root = "$($_.DeviceID)\"
+                    Root = ($_.DeviceID + [char]92)
                     VolumeName = if ($_.VolumeName) { $_.VolumeName } else { "Local Disk" }
                     DriveType = $typeStr
                     FileSystem = $_.FileSystem

@@ -1,5 +1,20 @@
 import os, sys, subprocess, winreg, ctypes, glob
 
+def detect_gpu_vendor():
+    try:
+        ps = "Get-CimInstance Win32_VideoController | Select-Object -ExpandProperty Name"
+        res = subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True, text=True, timeout=3)
+        out = res.stdout.lower()
+        if any(k in out for k in ["nvidia", "geforce", "rtx", "gtx", "quadro"]):
+            return "nvidia"
+        if any(k in out for k in ["amd", "radeon", "firepro"]):
+            return "amd"
+        if "intel" in out:
+            return "intel"
+    except Exception:
+        pass
+    return "nvidia"
+
 def is_ascii(s):
     try:
         s.encode('ascii')
@@ -219,9 +234,19 @@ def ensure_repaired_launch():
                             ptxt = ptxt.replace("<BE.Prefs.MediaIntelligence.AnalyzeImportedMediaForMISO>true<", "<BE.Prefs.MediaIntelligence.AnalyzeImportedMediaForMISO>false<")
                             ptxt = ptxt.replace("<BE.Prefs.MediaIntelligence.AnalyzeImportedMediaCacheLocation>1<", "<BE.Prefs.MediaIntelligence.AnalyzeImportedMediaCacheLocation>0<")
                             ptxt = ptxt.replace("<BE.Prefs.AutoSave.Interval>5<", "<BE.Prefs.AutoSave.Interval>15<")
-                            ptxt = ptxt.replace("<Project.Prefs.EnableIntelDecode>true<", "<Project.Prefs.EnableIntelDecode>false<")
-                            ptxt = ptxt.replace("<Project.Prefs.EnablehAMDDecode>true<", "<Project.Prefs.EnablehAMDDecode>false<")
-                            ptxt = ptxt.replace("<Project.Prefs.EnableNvidiaDecode>false<", "<Project.Prefs.EnableNvidiaDecode>true<")
+                            gpu_v = detect_gpu_vendor()
+                            if gpu_v == "nvidia":
+                                ptxt = ptxt.replace("<Project.Prefs.EnableIntelDecode>true<", "<Project.Prefs.EnableIntelDecode>false<")
+                                ptxt = ptxt.replace("<Project.Prefs.EnablehAMDDecode>true<", "<Project.Prefs.EnablehAMDDecode>false<")
+                                ptxt = ptxt.replace("<Project.Prefs.EnableNvidiaDecode>false<", "<Project.Prefs.EnableNvidiaDecode>true<")
+                            elif gpu_v == "amd":
+                                ptxt = ptxt.replace("<Project.Prefs.EnableIntelDecode>true<", "<Project.Prefs.EnableIntelDecode>false<")
+                                ptxt = ptxt.replace("<Project.Prefs.EnableNvidiaDecode>true<", "<Project.Prefs.EnableNvidiaDecode>false<")
+                                ptxt = ptxt.replace("<Project.Prefs.EnablehAMDDecode>false<", "<Project.Prefs.EnablehAMDDecode>true<")
+                            elif gpu_v == "intel":
+                                ptxt = ptxt.replace("<Project.Prefs.EnableNvidiaDecode>true<", "<Project.Prefs.EnableNvidiaDecode>false<")
+                                ptxt = ptxt.replace("<Project.Prefs.EnablehAMDDecode>true<", "<Project.Prefs.EnablehAMDDecode>false<")
+                                ptxt = ptxt.replace("<Project.Prefs.EnableIntelDecode>false<", "<Project.Prefs.EnableIntelDecode>true<")
                             with open(pfile, "w", encoding="utf-8") as pf:
                                 pf.write(ptxt)
                         except Exception:

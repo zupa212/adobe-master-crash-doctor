@@ -574,6 +574,47 @@ class UniversalAdobeRepairEngine:
         if not doc_dirs:
             return 0
 
+        # Dynamically auto-detect GPU architecture on ANY computer
+        has_nvidia = True
+        has_amd = False
+        has_intel = False
+        is_dual_gpu = False
+        try:
+            from core.system_inspector import SystemInspector
+            si = SystemInspector(self.logger)
+            sys_info = si.inspect_complete_system()
+            gpu_info = sys_info.get("gpu", {})
+            has_nvidia = gpu_info.get("has_nvidia", False)
+            has_amd = gpu_info.get("has_amd", False)
+            has_intel = gpu_info.get("has_intel", False)
+            is_dual_gpu = gpu_info.get("is_dual_gpu", False)
+        except Exception:
+            pass
+
+        # Intelligent Universal Decode Policy
+        if has_nvidia:
+            intel_dec = "false"
+            amd_dec = "false"
+            nvidia_dec = "true"
+            gpu_policy_msg = "GPU Auto-Detect: NVIDIA dGPU prioritized (CUDA acceleration enabled, iGPU decode conflict eliminated)."
+        elif has_amd:
+            intel_dec = "false"
+            amd_dec = "true"
+            nvidia_dec = "false"
+            gpu_policy_msg = "GPU Auto-Detect: AMD Radeon GPU prioritized (AMF hardware decode enabled)."
+        elif has_intel:
+            intel_dec = "true"
+            amd_dec = "false"
+            nvidia_dec = "false"
+            gpu_policy_msg = "GPU Auto-Detect: Intel Arc / QuickSync prioritized (Intel hardware decode enabled)."
+        else:
+            intel_dec = "false"
+            amd_dec = "false"
+            nvidia_dec = "false"
+            gpu_policy_msg = "GPU Auto-Detect: Generic software decoding fallback."
+
+        self.log(gpu_policy_msg, "INFO")
+
         patched_count = 0
         import re
 
@@ -607,20 +648,20 @@ class UniversalAdobeRepairEngine:
 
                             orig_content = content
 
-                            # 1. Dual-GPU Conflict Resolution (Intel vs NVIDIA)
+                            # 1. Universal Hardware Decode Policy (Dynamic per machine)
                             content = re.sub(
                                 r"<Project\.Prefs\.EnableIntelDecode>[^<]+</Project\.Prefs\.EnableIntelDecode>",
-                                "<Project.Prefs.EnableIntelDecode>false</Project.Prefs.EnableIntelDecode>",
+                                f"<Project.Prefs.EnableIntelDecode>{intel_dec}</Project.Prefs.EnableIntelDecode>",
                                 content
                             )
                             content = re.sub(
                                 r"<Project\.Prefs\.EnablehAMDDecode>[^<]+</Project\.Prefs\.EnablehAMDDecode>",
-                                "<Project.Prefs.EnablehAMDDecode>false</Project.Prefs.EnablehAMDDecode>",
+                                f"<Project.Prefs.EnablehAMDDecode>{amd_dec}</Project.Prefs.EnablehAMDDecode>",
                                 content
                             )
                             content = re.sub(
                                 r"<Project\.Prefs\.EnableNvidiaDecode>[^<]+</Project\.Prefs\.EnableNvidiaDecode>",
-                                "<Project.Prefs.EnableNvidiaDecode>true</Project.Prefs.EnableNvidiaDecode>",
+                                f"<Project.Prefs.EnableNvidiaDecode>{nvidia_dec}</Project.Prefs.EnableNvidiaDecode>",
                                 content
                             )
 
