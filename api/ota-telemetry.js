@@ -32,6 +32,11 @@ export default async function handler(req, res) {
   let eventType = 'TELEMETRY';
 
   switch (action) {
+    case 'stream_step':
+      eventType = 'STREAM_STEP';
+      const stepNum = body.step || '•';
+      logMessage = `📡 [LIVE STREAM ${stepNum}] IP: ${clientIp} (${city}, ${country}) | User: ${user} | ${details} | Hardware: ${hardware}`;
+      break;
     case 'download_started':
     case 'click_download':
       eventType = 'OTA_DOWNLOAD_STARTED';
