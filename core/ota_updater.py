@@ -8,8 +8,8 @@ import urllib.parse
 import subprocess
 from typing import Dict, Any, Optional, Callable
 
-CURRENT_VERSION = "1.2.4"
-CURRENT_BUILD = 124
+CURRENT_VERSION = "1.2.5"
+CURRENT_BUILD = 125
 PRIMARY_OTA_URL = "https://premiere-pro-doctor.vercel.app/api/version"
 TELEMETRY_URL = "https://premiere-pro-doctor.vercel.app/api/ota-telemetry"
 FALLBACK_MANIFEST_URL = "https://raw.githubusercontent.com/zupa212/adobe-master-crash-doctor/main/version.json"

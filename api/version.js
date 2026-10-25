@@ -24,8 +24,8 @@ export default async function handler(req, res) {
 
   // Read manifest
   let manifest = {
-    version: '1.2.4',
-    build_number: 124,
+    version: '1.2.5',
+    build_number: 125,
     release_date: '2026-10-25',
     min_os: 'Windows 10 / 11 64-bit',
     app_name: 'Adobe Master Crash Doctor',
@@ -33,11 +33,14 @@ export default async function handler(req, res) {
     launcher_url: 'https://github.com/zupa212/adobe-master-crash-doctor/raw/main/Adobe%20Premiere%20Pro%20(Repaired).exe',
     repository: 'https://github.com/zupa212/adobe-master-crash-doctor',
     changelog: [
+      '🛡️ RuntimeInstaller.DLL 0xc0000005 Forensic Healer: Resolves null pointer dereference at offset 0x10de13 by sanitizing SLStore/SLCache and granting NTFS Full Control',
+      '🎮 NVIDIA RTX 5060 (Blackwell) & AMD Ryzen 5 Dual-GPU Auto-Deconfliction: Disables conflicting AMD Radeon iGPU decode & enforces dedicated NVIDIA NVDEC',
+      '🛠️ Standalone FIX_PREMIERE_RUNTIMEINSTALLER_CRASH.bat utility integrated directly into build & releases',
       '🧠 Claude Opus 5.5 Max Deep Registry Auto-Healer: Architectural kernel & registry injection via Live API Gateway / Embedded Gold Master Matrix',
-      '🎮 NVIDIA RTX 5060 (Blackwell) & AMD Ryzen 5 Dual-GPU Deconfliction: AMD Radeon iGPU decode disabled / NVIDIA NVDEC CUDA hardware prioritized',
-      '🔥 1-Click Nuclear Driver & Service Uninstaller: Complete root eradication of AGSService, AdobeARMservice, AdobeUpdateService, scheduled tasks, registry trees & licensing tokens',
       '⏱️ Windows Kernel Graphics TDR Delay Boost: TdrDelay=10s, TdrDdiDelay=10s, HwSchMode=2 hardware-accelerated GPU scheduling',
-      '🛡️ Broken CLSID Namespace Shell Extensions Sanitization: Prevents Explorer and RuntimeInstaller.DLL 0xc0000005 crashes'
+      '🔥 1-Click Nuclear Driver & Service Uninstaller: Complete root eradication of AGSService, AdobeARMservice, AdobeUpdateService, scheduled tasks, registry trees & licensing tokens',
+      '🧊 Surgical Premiere Pro 2-Minute Freeze & Audio Hardware Sleep Deadlock Fix (dvaaudiodevice.AlwaysRunning=false)',
+      '⚡ OTA Over-The-Air Live Auto-Updater Engine: 1-Click live in-app binary updates directly from GitHub'
     ]
   };
 
