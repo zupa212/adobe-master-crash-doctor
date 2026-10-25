@@ -200,3 +200,5 @@ class MultiDiskScanner:
                         results["total_mb"] += mb
 
         return results
+
+    scan_all_drives = deep_scan_all_drives_for_all_adobe_apps

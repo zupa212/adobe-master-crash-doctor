@@ -1,4 +1,4 @@
-import os, sys, subprocess, winreg, ctypes
+import os, sys, subprocess, winreg, ctypes, glob
 
 def is_ascii(s):
     try:
@@ -7,10 +7,44 @@ def is_ascii(s):
     except UnicodeEncodeError:
         return False
 
+def get_documents_folders():
+    """Returns all candidate Documents folders across standard, OneDrive, and registry paths."""
+    candidates = []
+    # 1. Windows Shell Registry
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders") as key:
+            val, _ = winreg.QueryValueEx(key, "Personal")
+            expanded = os.path.expandvars(val)
+            if os.path.isdir(expanded) and expanded not in candidates:
+                candidates.append(expanded)
+    except Exception:
+        pass
+
+    userprofile = os.environ.get("USERPROFILE", "")
+    if userprofile:
+        # 2. Standard Documents
+        doc1 = os.path.join(userprofile, "Documents")
+        if os.path.isdir(doc1) and doc1 not in candidates:
+            candidates.append(doc1)
+        # 3. OneDrive Documents
+        doc2 = os.path.join(userprofile, "OneDrive", "Documents")
+        if os.path.isdir(doc2) and doc2 not in candidates:
+            candidates.append(doc2)
+
+    return candidates
+
 def find_premiere_executable():
-    # 1. Check registry App Paths
+    # 1. Check registry App Paths first if it points to an existing file
     try:
         with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\Adobe Premiere Pro.exe") as key:
+            val, _ = winreg.QueryValueEx(key, "")
+            if val and os.path.isfile(val):
+                return val
+    except Exception:
+        pass
+
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\Adobe Premiere Pro.exe") as key:
             val, _ = winreg.QueryValueEx(key, "")
             if val and os.path.isfile(val):
                 return val
@@ -23,11 +57,11 @@ def find_premiere_executable():
         r"D:\Adobe Suite\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
         r"D:\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
         r"D:\AdobePremierePro2026\Adobe Premiere Pro.exe",
-        r"F:\AdobePremierePro2026\Adobe Premiere Pro.exe",
-        r"F:\Νέος φάκελος (2)\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
         r"C:\Program Files\Adobe\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
         r"C:\Program Files\Adobe\Adobe Premiere Pro 2025\Adobe Premiere Pro.exe",
-        r"C:\Program Files\Adobe\Adobe Premiere Pro 2024\Adobe Premiere Pro.exe"
+        r"C:\Program Files\Adobe\Adobe Premiere Pro 2024\Adobe Premiere Pro.exe",
+        r"F:\AdobePremierePro2026\Adobe Premiere Pro.exe",
+        r"F:\Νέος φάκελος (2)\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe"
     ]
     for p in prioritized:
         if os.path.isfile(p):
@@ -36,7 +70,10 @@ def find_premiere_executable():
     # 3. Dynamic scan across all fixed and removable drives
     drives = [f"{d}:\\" for d in "CDEFGHIJKLMNOPQRSTUVWXYZ" if os.path.exists(f"{d}:\\")]
     for drive in drives:
-        for root_folder in ["Program Files\\Adobe", "Adobe Suite1", "Adobe Suite", "Adobe", "Apps\\Adobe", ""]:
+        for root_folder in [
+            "Adobe Suite1", "Adobe Suite", "Adobe Suite 2026", "Adobe Suite 2025",
+            "Program Files\\Adobe", "Adobe", "Apps\\Adobe", "Master Collection", ""
+        ]:
             target_dir = os.path.join(drive, root_folder) if root_folder else drive
             if os.path.isdir(target_dir):
                 try:
@@ -44,7 +81,6 @@ def find_premiere_executable():
                         if "Adobe Premiere Pro.exe" in files:
                             found = os.path.join(root, "Adobe Premiere Pro.exe")
                             return found
-                        # Limit depth to 3 for fast scan
                         rel = os.path.relpath(root, target_dir)
                         if rel.count(os.sep) >= 3:
                             dirs.clear()
@@ -86,6 +122,8 @@ def ensure_repaired_launch():
         if os.path.isfile(junction_exe):
             final_exe = junction_exe
 
+    work_dir = os.path.dirname(final_exe)
+
     # Enforce DirectX High-Performance GPU Affinity (GpuPreference=2)
     try:
         reg_key = r"Software\Microsoft\DirectX\UserGpuPreferences"
@@ -116,14 +154,21 @@ def ensure_repaired_launch():
     except Exception:
         pass
 
+    # Inject Anti-Deadlock Debug Database Flags into AppData and Application Directory
     try:
-        userprof = os.environ.get("USERPROFILE", r"C:\Users\marth")
-        # Ensure Anti-Deadlock Debug flags
+        userprof = os.environ.get("USERPROFILE", "")
         dd_targets = [
-            os.path.join(userprof, r"AppData\Roaming\Adobe\Premiere Pro\26.0\Debug Database.txt"),
-            os.path.join(userprof, r"AppData\Roaming\Adobe\Premiere Pro\Logs\Debug Database.txt"),
-            r"F:\AdobePremierePro2026\Debug Database.txt"
+            os.path.join(work_dir, "Debug Database.txt")
         ]
+        if userprof:
+            prem_appdata = os.path.join(userprof, r"AppData\Roaming\Adobe\Premiere Pro")
+            if os.path.isdir(prem_appdata):
+                for item in os.listdir(prem_appdata):
+                    v_p = os.path.join(prem_appdata, item)
+                    if os.path.isdir(v_p) and "backup" not in item.lower():
+                        dd_targets.append(os.path.join(v_p, "Debug Database.txt"))
+                dd_targets.append(os.path.join(prem_appdata, "Logs", "Debug Database.txt"))
+
         flags_to_enforce = {
             "dvaaudiodevice.AlwaysRunning": ("false", "false"),
             "AudioOutputOnlyUI": ("true", "true"),
@@ -138,42 +183,51 @@ def ensure_repaired_launch():
             "Player.DirectXAcceleratedRenderer": ("true", "true")
         }
         for dd in dd_targets:
-            if os.path.exists(dd):
-                try:
+            try:
+                os.makedirs(os.path.dirname(dd), exist_ok=True)
+                lines = []
+                if os.path.isfile(dd):
                     with open(dd, "r", encoding="utf-8", errors="replace") as f:
                         lines = f.readlines()
-                    updated = {}
-                    for l in lines:
-                        p = l.strip().split("\t")
-                        if len(p) >= 3:
-                            updated[p[0]] = (p[1], p[2])
-                    for k, v in flags_to_enforce.items():
-                        updated[k] = v
-                    with open(dd, "w", encoding="utf-8") as f:
-                        for k, (v1, v2) in sorted(updated.items()):
-                            f.write(f"{k}\t{v1}\t{v2}\n")
-                except Exception:
-                    pass
+                updated = {}
+                for l in lines:
+                    p = l.strip().split("\t")
+                    if len(p) >= 3:
+                        updated[p[0]] = (p[1], p[2])
+                for k, v in flags_to_enforce.items():
+                    updated[k] = v
+                with open(dd, "w", encoding="utf-8") as f:
+                    for k, (v1, v2) in sorted(updated.items()):
+                        f.write(f"{k}\t{v1}\t{v2}\n")
+            except Exception:
+                pass
 
-        # Ensure Prefs file has Sensei AI & MISO disabled
-        for pv in ["26.0", "24.0"]:
-            pfile = os.path.join(userprof, rf"Documents\Adobe\Premiere Pro\{pv}\Profile-marth\Adobe Premiere Pro Prefs")
-            if os.path.isfile(pfile):
-                try:
-                    with open(pfile, "r", encoding="utf-8", errors="replace") as pf:
-                        ptxt = pf.read()
-                    ptxt = ptxt.replace("<BE.Prefs.General.AutoAudioCategorizationDuringImport>true<", "<BE.Prefs.General.AutoAudioCategorizationDuringImport>false<")
-                    ptxt = ptxt.replace("<BE.Prefs.MediaIntelligence.AnalyzeImportedMediaForMISO>true<", "<BE.Prefs.MediaIntelligence.AnalyzeImportedMediaForMISO>false<")
-                    ptxt = ptxt.replace("<BE.Prefs.MediaIntelligence.AnalyzeImportedMediaCacheLocation>1<", "<BE.Prefs.MediaIntelligence.AnalyzeImportedMediaCacheLocation>0<")
-                    ptxt = ptxt.replace("<BE.Prefs.AutoSave.Interval>5<", "<BE.Prefs.AutoSave.Interval>15<")
-                    with open(pfile, "w", encoding="utf-8") as pf:
-                        pf.write(ptxt)
-                except Exception:
-                    pass
+        # Ensure Prefs file has Sensei AI & MISO disabled across ALL user profiles
+        doc_dirs = get_documents_folders()
+        for ddir in doc_dirs:
+            prem_doc_root = os.path.join(ddir, r"Adobe\Premiere Pro")
+            if os.path.isdir(prem_doc_root):
+                for root, _, files in os.walk(prem_doc_root):
+                    if "backup" in root.lower():
+                        continue
+                    if "Adobe Premiere Pro Prefs" in files:
+                        pfile = os.path.join(root, "Adobe Premiere Pro Prefs")
+                        try:
+                            with open(pfile, "r", encoding="utf-8", errors="replace") as pf:
+                                ptxt = pf.read()
+                            ptxt = ptxt.replace("<BE.Prefs.General.AutoAudioCategorizationDuringImport>true<", "<BE.Prefs.General.AutoAudioCategorizationDuringImport>false<")
+                            ptxt = ptxt.replace("<BE.Prefs.MediaIntelligence.AnalyzeImportedMediaForMISO>true<", "<BE.Prefs.MediaIntelligence.AnalyzeImportedMediaForMISO>false<")
+                            ptxt = ptxt.replace("<BE.Prefs.MediaIntelligence.AnalyzeImportedMediaCacheLocation>1<", "<BE.Prefs.MediaIntelligence.AnalyzeImportedMediaCacheLocation>0<")
+                            ptxt = ptxt.replace("<BE.Prefs.AutoSave.Interval>5<", "<BE.Prefs.AutoSave.Interval>15<")
+                            ptxt = ptxt.replace("<Project.Prefs.EnableIntelDecode>true<", "<Project.Prefs.EnableIntelDecode>false<")
+                            ptxt = ptxt.replace("<Project.Prefs.EnablehAMDDecode>true<", "<Project.Prefs.EnablehAMDDecode>false<")
+                            ptxt = ptxt.replace("<Project.Prefs.EnableNvidiaDecode>false<", "<Project.Prefs.EnableNvidiaDecode>true<")
+                            with open(pfile, "w", encoding="utf-8") as pf:
+                                pf.write(ptxt)
+                        except Exception:
+                            pass
     except Exception:
         pass
-
-    work_dir = os.path.dirname(final_exe)
 
     # 1. Deploy Microsoft Visual C++ 2015-2022 runtimes into app folder if missing
     try:
@@ -225,7 +279,7 @@ def ensure_repaired_launch():
     except Exception:
         pass
 
-    # Fix HKCU & HKLM App Paths and Premiere Pro 26.0 registry keys to clean ASCII junction
+    # Fix HKCU & HKLM App Paths and Premiere Pro registry keys to final executable
     try:
         with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\Adobe Premiere Pro.exe", 0, winreg.KEY_SET_VALUE) as key:
             winreg.SetValueEx(key, "", 0, winreg.REG_SZ, final_exe)
@@ -259,7 +313,7 @@ def ensure_repaired_launch():
     except Exception:
         pass
 
-    # Fix Start Menu and Desktop shortcuts to point to ASCII junction
+    # Fix Start Menu and Desktop shortcuts to point to final executable
     try:
         ps_fix_sc = f"""
         $wsh = New-Object -ComObject WScript.Shell

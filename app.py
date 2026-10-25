@@ -6,6 +6,18 @@ import webbrowser
 import customtkinter as ctk
 from tkinter import messagebox, filedialog
 
+from tkinter import messagebox, filedialog
+
+# Enforce UTF-8 console output for Greek Windows code pages
+if sys.platform == "win32":
+    try:
+        if sys.stdout and hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        if sys.stderr and hasattr(sys.stderr, "reconfigure"):
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 # Add current dir to sys.path
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
@@ -49,6 +61,16 @@ class AdobeMasterDoctorApp(ctk.CTk):
 
         self.diag_data = None
         self.is_fixing = False
+
+        # Admin Privilege Detection
+        try:
+            is_adm = ctypes.windll.shell32.IsUserAnAdmin() != 0
+        except Exception:
+            is_adm = False
+        if is_adm:
+            self.logger.info("Privileges: Running with Administrator Privileges (Full NTFS & HKLM Access Enabled).")
+        else:
+            self.logger.warning("Privileges: Running with standard user rights. Full Administrator privileges recommended for HKLM and NTFS repairs.")
 
         # Customizable 1-Click options
         self.opt_kill_procs = ctk.BooleanVar(value=True)

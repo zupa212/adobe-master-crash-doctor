@@ -7,8 +7,8 @@ import urllib.request
 import subprocess
 from typing import Dict, Any, Optional, Callable
 
-CURRENT_VERSION = "1.2.1"
-CURRENT_BUILD = 121
+CURRENT_VERSION = "1.2.2"
+CURRENT_BUILD = 122
 MANIFEST_URL = "https://raw.githubusercontent.com/zupa212/adobe-master-crash-doctor/main/version.json"
 REPO_API_URL = "https://api.github.com/repos/zupa212/adobe-master-crash-doctor/releases/latest"
 REPO_URL = "https://github.com/zupa212/adobe-master-crash-doctor"

@@ -1,6 +1,6 @@
 {
-  "version": "1.2.1",
-  "build_number": 121,
+  "version": "1.2.2",
+  "build_number": 122,
   "release_date": "2026-10-25",
   "min_os": "Windows 10 / 11 64-bit",
   "app_name": "Adobe Master Crash Doctor",
@@ -8,6 +8,7 @@
   "launcher_url": "https://github.com/zupa212/adobe-master-crash-doctor/raw/main/Adobe%20Premiere%20Pro%20(Repaired).exe",
   "repository": "https://github.com/zupa212/adobe-master-crash-doctor",
   "changelog": [
+    "🚀 Complete Cross-PC Universal Automation: Dynamic multi-disk path discovery & zero-hardcoding for remote machines",
     "🛡️ Dedicated RuntimeInstaller.DLL 0xc0000005 APPCRASH Hero Resolver & Visual C++ Deployment",
     "📂 Custom Adobe Executable Path Browser: Point and fix any custom path across any drive (D:, F:, etc.)",
     "⚡ OTA Over-The-Air Live Auto-Updater Engine: 1-Click live in-app binary updates directly from GitHub",

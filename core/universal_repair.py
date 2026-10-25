@@ -16,7 +16,16 @@ class UniversalAdobeRepairEngine:
         if self.logger:
             self.logger.log(msg, level)
         else:
-            print(f"[{level}] {msg}", flush=True)
+            formatted = f"[{level}] {msg}"
+            try:
+                print(formatted, flush=True)
+            except Exception:
+                try:
+                    enc = getattr(sys.stdout, 'encoding', None) or 'ascii'
+                    safe_text = formatted.encode(enc, errors='replace').decode(enc)
+                    print(safe_text, flush=True)
+                except Exception:
+                    pass
 
     def kill_all_adobe_processes(self) -> int:
         """Forcefully terminates all Adobe processes across the entire suite in a single fast call."""
@@ -427,9 +436,31 @@ class UniversalAdobeRepairEngine:
             selected_app_ids=[app_id]
         )
 
-    def patch_premiere_debug_database(self) -> int:
+    def _get_documents_folders(self) -> List[str]:
+        """Returns all candidate Documents folders across Windows Shell registry, standard, and OneDrive paths."""
+        candidates = []
+        try:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders") as key:
+                val, _ = winreg.QueryValueEx(key, "Personal")
+                expanded = os.path.expandvars(val)
+                if os.path.isdir(expanded) and expanded not in candidates:
+                    candidates.append(expanded)
+        except Exception:
+            pass
+
+        userprofile = os.environ.get("USERPROFILE", "")
+        if userprofile:
+            doc1 = os.path.join(userprofile, "Documents")
+            if os.path.isdir(doc1) and doc1 not in candidates:
+                candidates.append(doc1)
+            doc2 = os.path.join(userprofile, "OneDrive", "Documents")
+            if os.path.isdir(doc2) and doc2 not in candidates:
+                candidates.append(doc2)
+        return candidates
+
+    def patch_premiere_debug_database(self, additional_app_dirs: List[str] = None) -> int:
         """
-        Patches Debug Database.txt across all installed Premiere Pro versions to eliminate:
+        Patches Debug Database.txt across all installed Premiere Pro versions and app folders to eliminate:
         1. dvaaudiodevice.AlwaysRunning = false false (Stops the 120s audio hardware clock sleep deadlock)
         2. AudioOutputOnlyUI = true true (Stops microphone polling / Default Input hang)
         3. dvaaudiodevice.EnableRealtimeBlockingAccessFromIOThread = false false
@@ -437,11 +468,6 @@ class UniversalAdobeRepairEngine:
         5. TeamProjects.DisableBackgroundSync = true true (Eliminates 120s IPC socket timeout)
         6. DS.GPUSnifferLaunchTimeout = 10000 10000
         """
-        userprofile = os.environ.get("USERPROFILE", r"C:\Users\marth")
-        appdata_prem = os.path.join(userprofile, r"AppData\Roaming\Adobe\Premiere Pro")
-        if not os.path.isdir(appdata_prem):
-            return 0
-
         target_settings = {
             "dvaaudiodevice.AlwaysRunning": ("false", "false"),
             "AudioOutputOnlyUI": ("true", "true"),
@@ -466,165 +492,188 @@ class UniversalAdobeRepairEngine:
             "GF.PrimaryDeviceIndex": ("0", "0")
         }
 
+        candidate_paths = []
+        userprofile = os.environ.get("USERPROFILE", "")
+        if userprofile:
+            appdata_prem = os.path.join(userprofile, r"AppData\Roaming\Adobe\Premiere Pro")
+            if os.path.isdir(appdata_prem):
+                for item in os.listdir(appdata_prem):
+                    v_p = os.path.join(appdata_prem, item)
+                    if os.path.isdir(v_p) and "backup" not in item.lower():
+                        candidate_paths.append(os.path.join(v_p, "Debug Database.txt"))
+                candidate_paths.append(os.path.join(appdata_prem, "Logs", "Debug Database.txt"))
+
+        if additional_app_dirs:
+            for adir in additional_app_dirs:
+                if adir and os.path.isdir(adir):
+                    candidate_paths.append(os.path.join(adir, "Debug Database.txt"))
+
+        for kd in [
+            r"D:\Adobe Suite1\Adobe Premiere Pro 2026",
+            r"D:\Adobe Suite\Adobe Premiere Pro 2026",
+            r"D:\Adobe Premiere Pro 2026",
+            r"F:\AdobePremierePro2026",
+            r"C:\Program Files\Adobe\Adobe Premiere Pro 2026",
+            r"C:\Program Files\Adobe\Adobe Premiere Pro 2025"
+        ]:
+            if os.path.isdir(kd):
+                candidate_paths.append(os.path.join(kd, "Debug Database.txt"))
+
+        candidate_paths = list(dict.fromkeys(candidate_paths))
         patched_count = 0
-        search_dirs = [appdata_prem]
-        if os.path.isdir(r"F:\AdobePremierePro2026"):
-            search_dirs.append(r"F:\AdobePremierePro2026")
-
-        for sdir in search_dirs:
-            if sdir == r"F:\AdobePremierePro2026":
-                candidate_paths = [os.path.join(sdir, "Debug Database.txt")]
-            else:
-                candidate_paths = [
-                    os.path.join(sdir, item, "Debug Database.txt")
-                    for item in os.listdir(sdir)
-                    if os.path.isdir(os.path.join(sdir, item)) and "backup" not in item.lower()
-                ]
-                candidate_paths.append(os.path.join(sdir, "Logs", "Debug Database.txt"))
-
-            for dd_path in candidate_paths:
-                try:
-                    os.makedirs(os.path.dirname(dd_path), exist_ok=True)
-                    lines = []
-                    if os.path.isfile(dd_path):
-                        with open(dd_path, "r", encoding="utf-8", errors="replace") as f:
-                            lines = f.readlines()
-                        bak_path = dd_path + f".bak_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        for dd_path in candidate_paths:
+            try:
+                os.makedirs(os.path.dirname(dd_path), exist_ok=True)
+                lines = []
+                if os.path.isfile(dd_path):
+                    with open(dd_path, "r", encoding="utf-8", errors="replace") as f:
+                        lines = f.readlines()
+                    bak_path = dd_path + f".bak_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                    try:
                         shutil.copy2(dd_path, bak_path)
+                    except Exception:
+                        pass
 
-                    new_lines = []
-                    keys_updated = set()
-                    for line in lines:
-                        parts = line.strip().split("\t")
-                        if len(parts) >= 2:
-                            k = parts[0]
-                            if k in target_settings:
-                                v1, v2 = target_settings[k]
-                                new_lines.append(f"{k}\t{v1}\t{v2}\n")
-                                keys_updated.add(k)
-                                continue
-                        new_lines.append(line)
-
-                    for k, (v1, v2) in target_settings.items():
-                        if k not in keys_updated:
+                new_lines = []
+                keys_updated = set()
+                for line in lines:
+                    parts = line.strip().split("\t")
+                    if len(parts) >= 2:
+                        k = parts[0]
+                        if k in target_settings:
+                            v1, v2 = target_settings[k]
                             new_lines.append(f"{k}\t{v1}\t{v2}\n")
+                            keys_updated.add(k)
+                            continue
+                    new_lines.append(line)
 
-                    with open(dd_path, "w", encoding="utf-8") as f:
-                        f.writelines(new_lines)
-                    patched_count += 1
-                    self.log(f"Debug Database: Injected 21 Anti-Deadlock telemetry & audio flags into {dd_path}.", "SUCCESS")
-                except Exception as e:
-                    self.log(f"Debug Database patch note ({dd_path}): {e}", "WARNING")
+                for k, (v1, v2) in target_settings.items():
+                    if k not in keys_updated:
+                        new_lines.append(f"{k}\t{v1}\t{v2}\n")
+
+                with open(dd_path, "w", encoding="utf-8") as f:
+                    f.writelines(new_lines)
+                patched_count += 1
+                self.log(f"Debug Database: Injected 21 Anti-Deadlock telemetry & audio flags into {dd_path}.", "SUCCESS")
+            except Exception as e:
+                self.log(f"Debug Database patch note ({dd_path}): {e}", "WARNING")
 
         return patched_count
 
     def patch_premiere_preferences(self) -> int:
         """
         Optimizes Premiere Pro preferences to eliminate the 2-minute freeze:
-        1. Sets Project.Prefs.EnableIntelDecode to false (eliminates Intel Ultra 7 Arc / NVIDIA RTX 3060 dual-GPU collision)
+        1. Sets Project.Prefs.EnableIntelDecode to false (eliminates Intel Ultra 7 Arc / NVIDIA RTX dual-GPU collision)
         2. Sets Project.Prefs.EnablehAMDDecode to false
         3. Enforces Project.Prefs.EnableNvidiaDecode to true (dedicated hardware acceleration)
         4. Disables cloud auto-save (BE.Prefs.AutoSave.DoSaveToCloud = false)
         5. Creates clean ASCII Scratch Disk folder on NVMe SSD
+        6. Disables Sensei / MISO Background Audio & Speech AI Analysis across all user profiles
         """
-        userprofile = os.environ.get("USERPROFILE", r"C:\Users\marth")
-        docs_prem = os.path.join(userprofile, r"Documents\Adobe\Premiere Pro")
-        if not os.path.isdir(docs_prem):
+        doc_dirs = self._get_documents_folders()
+        if not doc_dirs:
             return 0
-
-        # Create clean ASCII scratch directory
-        scratch_dir = os.path.join(docs_prem, "Scratch")
-        try:
-            os.makedirs(scratch_dir, exist_ok=True)
-            self.log(f"Scratch Directory: Verified clean NVMe scratch path: {scratch_dir}", "SUCCESS")
-        except Exception:
-            pass
 
         patched_count = 0
         import re
-        for root, dirs, files in os.walk(docs_prem):
-            if "backup" in root.lower():
+
+        for ddir in doc_dirs:
+            docs_prem = os.path.join(ddir, r"Adobe\Premiere Pro")
+            if not os.path.isdir(docs_prem):
                 continue
-            for f in files:
-                if f == "Adobe Premiere Pro Prefs":
-                    fp = os.path.join(root, f)
-                    try:
-                        with open(fp, "r", encoding="utf-8", errors="replace") as handle:
-                            content = handle.read()
 
-                        # Backup
-                        bak = fp + f".bak_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                        shutil.copy2(fp, bak)
+            scratch_dir = os.path.join(docs_prem, "Scratch")
+            try:
+                os.makedirs(scratch_dir, exist_ok=True)
+                self.log(f"Scratch Directory: Verified clean NVMe scratch path: {scratch_dir}", "SUCCESS")
+            except Exception:
+                pass
 
-                        orig_content = content
+            for root, dirs, files in os.walk(docs_prem):
+                if "backup" in root.lower():
+                    continue
+                for f in files:
+                    if f == "Adobe Premiere Pro Prefs":
+                        fp = os.path.join(root, f)
+                        try:
+                            with open(fp, "r", encoding="utf-8", errors="replace") as handle:
+                                content = handle.read()
 
-                        # 1. Dual-GPU Conflict Resolution (Intel vs NVIDIA)
-                        content = re.sub(
-                            r"<Project\.Prefs\.EnableIntelDecode>[^<]+</Project\.Prefs\.EnableIntelDecode>",
-                            "<Project.Prefs.EnableIntelDecode>false</Project.Prefs.EnableIntelDecode>",
-                            content
-                        )
-                        content = re.sub(
-                            r"<Project\.Prefs\.EnablehAMDDecode>[^<]+</Project\.Prefs\.EnablehAMDDecode>",
-                            "<Project.Prefs.EnablehAMDDecode>false</Project.Prefs.EnablehAMDDecode>",
-                            content
-                        )
-                        content = re.sub(
-                            r"<Project\.Prefs\.EnableNvidiaDecode>[^<]+</Project\.Prefs\.EnableNvidiaDecode>",
-                            "<Project.Prefs.EnableNvidiaDecode>true</Project.Prefs.EnableNvidiaDecode>",
-                            content
-                        )
+                            bak = fp + f".bak_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                            try:
+                                shutil.copy2(fp, bak)
+                            except Exception:
+                                pass
 
-                        # 2. Cloud AutoSave Disabler & Safe Interval
-                        content = re.sub(
-                            r"<BE\.Prefs\.AutoSave\.DoSaveToCloud>[^<]+</BE\.Prefs\.AutoSave\.DoSaveToCloud>",
-                            "<BE.Prefs.AutoSave.DoSaveToCloud>false</BE.Prefs.AutoSave.DoSaveToCloud>",
-                            content
-                        )
-                        content = re.sub(
-                            r"<BE\.Prefs\.AutoSave\.Interval>[^<]+</BE\.Prefs\.AutoSave\.Interval>",
-                            "<BE.Prefs.AutoSave.Interval>15</BE.Prefs.AutoSave.Interval>",
-                            content
-                        )
+                            orig_content = content
 
-                        # 3. Disable Sensei / MISO Background Audio & Speech AI Analysis (Deadlock trigger on MKV/MP4)
-                        content = re.sub(
-                            r"<BE\.Prefs\.General\.AutoAudioCategorizationDuringImport>[^<]+</BE\.Prefs\.General\.AutoAudioCategorizationDuringImport>",
-                            "<BE.Prefs.General.AutoAudioCategorizationDuringImport>false</BE.Prefs.General.AutoAudioCategorizationDuringImport>",
-                            content
-                        )
-                        content = re.sub(
-                            r"<BE\.Prefs\.MediaIntelligence\.AnalyzeImportedMediaForMISO>[^<]+</BE\.Prefs\.MediaIntelligence\.AnalyzeImportedMediaForMISO>",
-                            "<BE.Prefs.MediaIntelligence.AnalyzeImportedMediaForMISO>false</BE.Prefs.MediaIntelligence.AnalyzeImportedMediaForMISO>",
-                            content
-                        )
-                        content = re.sub(
-                            r"<BE\.Prefs\.MediaIntelligence\.AnalyzeImportedMediaCacheLocation>[^<]+</BE\.Prefs\.MediaIntelligence\.AnalyzeImportedMediaCacheLocation>",
-                            "<BE.Prefs.MediaIntelligence.AnalyzeImportedMediaCacheLocation>0</BE.Prefs.MediaIntelligence.AnalyzeImportedMediaCacheLocation>",
-                            content
-                        )
+                            # 1. Dual-GPU Conflict Resolution (Intel vs NVIDIA)
+                            content = re.sub(
+                                r"<Project\.Prefs\.EnableIntelDecode>[^<]+</Project\.Prefs\.EnableIntelDecode>",
+                                "<Project.Prefs.EnableIntelDecode>false</Project.Prefs.EnableIntelDecode>",
+                                content
+                            )
+                            content = re.sub(
+                                r"<Project\.Prefs\.EnablehAMDDecode>[^<]+</Project\.Prefs\.EnablehAMDDecode>",
+                                "<Project.Prefs.EnablehAMDDecode>false</Project.Prefs.EnablehAMDDecode>",
+                                content
+                            )
+                            content = re.sub(
+                                r"<Project\.Prefs\.EnableNvidiaDecode>[^<]+</Project\.Prefs\.EnableNvidiaDecode>",
+                                "<Project.Prefs.EnableNvidiaDecode>true</Project.Prefs.EnableNvidiaDecode>",
+                                content
+                            )
 
-                        # 4. Timecode device control hang prevention
-                        content = re.sub(
-                            r"<ML\.Prefs\.Capture\.PreferDeviceControlTimecode>[^<]+</ML\.Prefs\.Capture\.PreferDeviceControlTimecode>",
-                            "<ML.Prefs.Capture.PreferDeviceControlTimecode>false</ML.Prefs.Capture.PreferDeviceControlTimecode>",
-                            content
-                        )
+                            # 2. Cloud AutoSave Disabler & Safe Interval
+                            content = re.sub(
+                                r"<BE\.Prefs\.AutoSave\.DoSaveToCloud>[^<]+</BE\.Prefs\.AutoSave\.DoSaveToCloud>",
+                                "<BE.Prefs.AutoSave.DoSaveToCloud>false</BE.Prefs.AutoSave.DoSaveToCloud>",
+                                content
+                            )
+                            content = re.sub(
+                                r"<BE\.Prefs\.AutoSave\.Interval>[^<]+</BE\.Prefs\.AutoSave\.Interval>",
+                                "<BE.Prefs.AutoSave.Interval>15</BE.Prefs.AutoSave.Interval>",
+                                content
+                            )
 
-                        if content != orig_content:
-                            with open(fp, "w", encoding="utf-8") as handle:
-                                handle.write(content)
-                            patched_count += 1
-                            self.log(f"Preferences Optimizer: Patched Dual-GPU & Cloud Auto-Save settings in {fp}", "SUCCESS")
-                    except Exception as e:
-                        self.log(f"Preferences patch note: {e}", "WARNING")
+                            # 3. Disable Sensei / MISO Background Audio & Speech AI Analysis (Deadlock trigger on MKV/MP4)
+                            content = re.sub(
+                                r"<BE\.Prefs\.General\.AutoAudioCategorizationDuringImport>[^<]+</BE\.Prefs\.General\.AutoAudioCategorizationDuringImport>",
+                                "<BE.Prefs.General.AutoAudioCategorizationDuringImport>false</BE.Prefs.General.AutoAudioCategorizationDuringImport>",
+                                content
+                            )
+                            content = re.sub(
+                                r"<BE\.Prefs\.MediaIntelligence\.AnalyzeImportedMediaForMISO>[^<]+</BE\.Prefs\.MediaIntelligence\.AnalyzeImportedMediaForMISO>",
+                                "<BE.Prefs.MediaIntelligence.AnalyzeImportedMediaForMISO>false</BE.Prefs.MediaIntelligence.AnalyzeImportedMediaForMISO>",
+                                content
+                            )
+                            content = re.sub(
+                                r"<BE\.Prefs\.MediaIntelligence\.AnalyzeImportedMediaCacheLocation>[^<]+</BE\.Prefs\.MediaIntelligence\.AnalyzeImportedMediaCacheLocation>",
+                                "<BE.Prefs.MediaIntelligence.AnalyzeImportedMediaCacheLocation>0</BE.Prefs.MediaIntelligence.AnalyzeImportedMediaCacheLocation>",
+                                content
+                            )
+
+                            # 4. Timecode device control hang prevention
+                            content = re.sub(
+                                r"<ML\.Prefs\.Capture\.PreferDeviceControlTimecode>[^<]+</ML\.Prefs\.Capture\.PreferDeviceControlTimecode>",
+                                "<ML.Prefs.Capture.PreferDeviceControlTimecode>false</ML.Prefs.Capture.PreferDeviceControlTimecode>",
+                                content
+                            )
+
+                            if content != orig_content:
+                                with open(fp, "w", encoding="utf-8") as handle:
+                                    handle.write(content)
+                                patched_count += 1
+                                self.log(f"Preferences Optimizer: Patched Dual-GPU & Cloud Auto-Save settings in {fp}", "SUCCESS")
+                        except Exception as e:
+                            self.log(f"Preferences patch note: {e}", "WARNING")
 
         return patched_count
 
     def fix_premiere_pro_freeze(self, all_detected_apps: List[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         🧊 SURGICAL ANTI-FREEZE & 2-MINUTE TIMEOUT RESOLVER FOR PREMIERE PRO:
-        Directly targets and resolves the verified root causes of the 2-minute "Not Responding" freeze:
+        Directly targets and resolves the verified root causes of the 2-minute 'Not Responding' freeze:
         1. Terminate all deadlocked daemons, renderers, and cloud sync services (AdobeCollabSync, CCXProcess, DynamicLink)
         2. Stop interfering background services (AdobeUpdateService, AdobeARMservice)
         3. Audio Device Thread Anti-Deadlock Patching (dvaaudiodevice.AlwaysRunning=false, AudioOutputOnlyUI=true)
@@ -632,7 +681,8 @@ class UniversalAdobeRepairEngine:
         5. Windows GPU TDR (Timeout Detection and Recovery) Registry Delay Boost (TdrDelay=10s, TdrDdiDelay=10s)
         6. Deep Media Cache & Conforming File Purge (.pek, .cfa, .mcdb, analyzer cache, lockfiles)
         7. Enforce DirectX High-Performance GPU Affinity (GpuPreference=2)
-        8. Verify & Repair NTFS ASCII Junction (F:\\AdobePremierePro2026)
+        8. Dynamic Detection & NTFS ASCII Junction if non-ASCII path exists
+        9. Registry App Paths & Shortcuts pointing to the real valid executable
         """
         self.log("===================================================================", "INFO")
         self.log("  🧊 STARTING PREMIERE PRO 2-MINUTE TIMEOUT & ANTI-FREEZE PROTOCOL", "INFO")
@@ -665,13 +715,80 @@ class UniversalAdobeRepairEngine:
         if services_stopped > 0:
             self.log(f"Service Sanitizer: Paused {services_stopped} background Adobe update services to prevent file locks.", "SUCCESS")
 
-        # 3. Audio Device Thread Anti-Deadlock Patching (Debug Database.txt)
-        dd_patched = self.patch_premiere_debug_database()
+        # 3. Dynamic candidate gathering for Premiere Pro installations
+        premiere_paths = []
+        if all_detected_apps:
+            for app in all_detected_apps:
+                ep = app.get("exe_path", "")
+                if ep and os.path.isfile(ep) and "premiere" in os.path.basename(ep).lower():
+                    if ep not in premiere_paths:
+                        premiere_paths.append(ep)
 
-        # 4. Hardware Decoding & Dual-GPU Conflict Resolution (Adobe Premiere Pro Prefs)
+        prioritized_candidates = [
+            r"D:\Adobe Suite1\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
+            r"D:\Adobe Suite\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
+            r"D:\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
+            r"D:\AdobePremierePro2026\Adobe Premiere Pro.exe",
+            r"C:\Program Files\Adobe\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
+            r"C:\Program Files\Adobe\Adobe Premiere Pro 2025\Adobe Premiere Pro.exe",
+            r"C:\Program Files\Adobe\Adobe Premiere Pro 2024\Adobe Premiere Pro.exe",
+            r"F:\AdobePremierePro2026\Adobe Premiere Pro.exe",
+            r"F:\Νέος φάκελος (2)\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe"
+        ]
+        for pc in prioritized_candidates:
+            if os.path.isfile(pc) and pc not in premiere_paths:
+                premiere_paths.append(pc)
+
+        # Fast disk scanner fallback if not found yet
+        if not premiere_paths:
+            try:
+                from core.disk_scanner import MultiDiskScanner
+                scanner = MultiDiskScanner(self.logger)
+                for sc in scanner.scan_all_drives():
+                    ep = sc.get("exe_path", "")
+                    if ep and os.path.isfile(ep) and "premiere" in os.path.basename(ep).lower():
+                        if ep not in premiere_paths:
+                            premiere_paths.append(ep)
+            except Exception:
+                pass
+
+        primary_prem = premiere_paths[0] if premiere_paths else None
+        final_prem = primary_prem
+        target_work_dir = os.path.dirname(primary_prem) if primary_prem else None
+
+        if primary_prem:
+            drive = os.path.splitdrive(primary_prem)[0]
+            try:
+                primary_prem.encode('ascii')
+                is_clean_ascii = True
+            except UnicodeEncodeError:
+                is_clean_ascii = False
+
+            if not is_clean_ascii:
+                ascii_junction = f"{drive}\\AdobePremierePro2026"
+                junction_exe = os.path.join(ascii_junction, "Adobe Premiere Pro.exe")
+                if not os.path.exists(ascii_junction):
+                    try:
+                        subprocess.run(
+                            f'cmd /c mklink /J "{ascii_junction}" "{os.path.dirname(primary_prem)}"',
+                            shell=True,
+                            capture_output=True
+                        )
+                    except Exception:
+                        pass
+                if os.path.isfile(junction_exe):
+                    final_prem = junction_exe
+                    target_work_dir = ascii_junction
+                    self.log(f"NTFS Junction: Created clean ASCII path {ascii_junction} for Premiere Pro.", "SUCCESS")
+
+        # 4. Audio Device Thread Anti-Deadlock Patching (Debug Database.txt)
+        app_dirs_to_patch = [target_work_dir] if target_work_dir else []
+        dd_patched = self.patch_premiere_debug_database(app_dirs_to_patch)
+
+        # 5. Hardware Decoding & Dual-GPU Conflict Resolution (Adobe Premiere Pro Prefs)
         prefs_patched = self.patch_premiere_preferences()
 
-        # 5. Windows GPU TDR Boost (Stops Windows from killing GPU driver during timeline renders)
+        # 6. Windows GPU TDR Boost
         tdr_applied = False
         try:
             reg_path = r"SYSTEM\CurrentControlSet\Control\GraphicsDrivers"
@@ -694,18 +811,20 @@ class UniversalAdobeRepairEngine:
             except Exception as pe:
                 self.log(f"GPU TDR Fix Note: {pe}", "WARNING")
 
-        # 6. Deep Media Cache & Conforming File Purge (.pek, .cfa, .mcdb)
-        userprofile = os.environ.get("USERPROFILE", r"C:\Users\marth")
-        cache_targets = [
-            os.path.join(userprofile, r"AppData\Roaming\Adobe\Common\Media Cache Files"),
-            os.path.join(userprofile, r"AppData\Roaming\Adobe\Common\Media Cache"),
-            os.path.join(userprofile, r"AppData\Roaming\Adobe\Common\Peak Files"),
-            os.path.join(userprofile, r"AppData\Roaming\Adobe\Common\PTX"),
-            os.path.join(userprofile, r"AppData\Roaming\Adobe\Common\Analyzer Cache Files"),
-            os.path.join(userprofile, r"AppData\Roaming\Adobe\Premiere Pro\26.0\logs"),
-            os.path.join(userprofile, r"AppData\Roaming\Adobe\Premiere Pro\24.0\logs"),
-            os.path.join(userprofile, r"AppData\Local\Temp\Adobe")
-        ]
+        # 7. Deep Media Cache & Conforming File Purge (.pek, .cfa, .mcdb)
+        userprofile = os.environ.get("USERPROFILE", "")
+        cache_targets = []
+        if userprofile:
+            cache_targets = [
+                os.path.join(userprofile, r"AppData\Roaming\Adobe\Common\Media Cache Files"),
+                os.path.join(userprofile, r"AppData\Roaming\Adobe\Common\Media Cache"),
+                os.path.join(userprofile, r"AppData\Roaming\Adobe\Common\Peak Files"),
+                os.path.join(userprofile, r"AppData\Roaming\Adobe\Common\PTX"),
+                os.path.join(userprofile, r"AppData\Roaming\Adobe\Common\Analyzer Cache Files"),
+                os.path.join(userprofile, r"AppData\Roaming\Adobe\Premiere Pro\26.0\logs"),
+                os.path.join(userprofile, r"AppData\Roaming\Adobe\Premiere Pro\24.0\logs"),
+                os.path.join(userprofile, r"AppData\Local\Temp\Adobe")
+            ]
         purged_files = 0
         for cdir in cache_targets:
             if os.path.isdir(cdir):
@@ -721,12 +840,15 @@ class UniversalAdobeRepairEngine:
                     pass
         self.log(f"Media Cache Deep Clean: Purged {purged_files} corrupt playback & conforming cache files (.pek, .cfa, .mcdb).", "SUCCESS")
 
-        # 7. Scratch Disk & Audio Lockfile Wipe
-        lock_dirs = [
-            os.path.join(userprofile, r"Documents\Adobe\Premiere Pro"),
-            os.path.join(userprofile, r"AppData\Roaming\Adobe\Premiere Pro")
-        ]
+        # 8. Scratch Disk & Audio Lockfile Wipe
         locks_removed = 0
+        doc_dirs = self._get_documents_folders()
+        lock_dirs = []
+        for ddir in doc_dirs:
+            lock_dirs.append(os.path.join(ddir, r"Adobe\Premiere Pro"))
+        if userprofile:
+            lock_dirs.append(os.path.join(userprofile, r"AppData\Roaming\Adobe\Premiere Pro"))
+
         for ldir in lock_dirs:
             if os.path.isdir(ldir):
                 try:
@@ -742,16 +864,12 @@ class UniversalAdobeRepairEngine:
                     pass
         self.log(f"Lockfile Cleaner: Removed {locks_removed} orphaned lockfiles and scratch handles.", "SUCCESS")
 
-        # 8. Enforce DirectX High-Performance GPU Affinity
-        premiere_paths = [
-            r"F:\AdobePremierePro2026\Adobe Premiere Pro.exe",
-            r"F:\Νέος φάκελος (2)\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
-            r"C:\Program Files\Adobe\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
-            r"C:\Program Files\Adobe\Adobe Premiere Pro 2025\Adobe Premiere Pro.exe",
-            r"C:\Program Files\Adobe\Adobe Premiere Pro 2024\Adobe Premiere Pro.exe"
-        ]
+        # 9. Enforce DirectX High-Performance GPU Affinity
+        gpu_targets = list(premiere_paths)
+        if final_prem and final_prem not in gpu_targets:
+            gpu_targets.append(final_prem)
         gpu_locked = 0
-        for p in premiere_paths:
+        for p in gpu_targets:
             if os.path.isfile(p):
                 try:
                     reg_key = r"Software\Microsoft\DirectX\UserGpuPreferences"
@@ -762,81 +880,81 @@ class UniversalAdobeRepairEngine:
                     pass
         self.log(f"DirectX GPU Preference: Enforced High-Performance Affinity on {gpu_locked} Premiere Pro paths.", "SUCCESS")
 
-        # 9. Ensure NTFS ASCII Junction is valid
-        if os.path.isdir(r"F:\Νέος φάκελος (2)\Adobe Premiere Pro 2026") and not os.path.isdir(r"F:\AdobePremierePro2026"):
+        # 10. Update Registry App Paths, Presets, and Common Plug-ins for the REAL installation
+        if final_prem and target_work_dir and os.path.isdir(target_work_dir):
             try:
-                subprocess.run(
-                    ["cmd.exe", "/c", 'mklink /J "F:\\AdobePremierePro2026" "F:\\Νέος φάκελος (2)\\Adobe Premiere Pro 2026"'],
-                    capture_output=True
-                )
-                self.log("NTFS Junction: Verified and repaired clean ASCII path F:\\AdobePremierePro2026.", "SUCCESS")
+                os.makedirs(os.path.join(target_work_dir, r"Plug-ins\Common"), exist_ok=True)
             except Exception:
                 pass
 
-        # 10. Fix HKLM & HKCU App Paths and Premiere Pro 26.0 registry keys
-        try:
-            os.makedirs(r"F:\AdobePremierePro2026\Plug-ins\Common", exist_ok=True)
-            # HKCU App Paths (user-level, always accessible without elevation)
-            app_p = r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\Adobe Premiere Pro.exe"
-            with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, app_p, 0, winreg.KEY_SET_VALUE) as key:
-                winreg.SetValueEx(key, "", 0, winreg.REG_SZ, r"F:\AdobePremierePro2026\Adobe Premiere Pro.exe")
-                winreg.SetValueEx(key, "Path", 0, winreg.REG_SZ, r"F:\AdobePremierePro2026\\")
-            self.log("Registry Redirection: Updated HKCU App Paths to clean ASCII junction.", "SUCCESS")
-        except Exception:
-            pass
+            # HKCU App Paths
+            try:
+                app_p = r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\Adobe Premiere Pro.exe"
+                with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, app_p, 0, winreg.KEY_SET_VALUE) as key:
+                    winreg.SetValueEx(key, "", 0, winreg.REG_SZ, final_prem)
+                    winreg.SetValueEx(key, "Path", 0, winreg.REG_SZ, target_work_dir + "\\")
+                self.log(f"Registry Redirection: Updated HKCU App Paths to {final_prem}.", "SUCCESS")
+            except Exception:
+                pass
 
-        try:
-            prem_k = r"SOFTWARE\Adobe\Premiere Pro\26.0"
-            with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, prem_k, 0, winreg.KEY_SET_VALUE) as key:
-                winreg.SetValueEx(key, "SequencePresetsPath", 0, winreg.REG_SZ, r"F:\AdobePremierePro2026\Settings\SequencePresets")
-                winreg.SetValueEx(key, "SequencePreviewPresetsPath", 0, winreg.REG_SZ, r"F:\AdobePremierePro2026\Settings\EncoderPresets\SequencePreview")
-                winreg.SetValueEx(key, "PluginInstallPath", 0, winreg.REG_SZ, r"F:\AdobePremierePro2026\Plug-ins\Common")
-                winreg.SetValueEx(key, "RecoveryOpenProjectInfos", 0, winreg.REG_SZ, "")
-            self.log("Registry Redirection: Updated HKCU Premiere Pro 26.0 presets, plugins & cleared recovery locks.", "SUCCESS")
-        except Exception:
-            pass
+            # HKLM App Paths
+            try:
+                app_p = r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\Adobe Premiere Pro.exe"
+                with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, app_p, 0, winreg.KEY_SET_VALUE) as key:
+                    winreg.SetValueEx(key, "", 0, winreg.REG_SZ, final_prem)
+                    winreg.SetValueEx(key, "Path", 0, winreg.REG_SZ, target_work_dir + "\\")
+                self.log(f"Registry Redirection: Updated HKLM App Paths to {final_prem}.", "SUCCESS")
+            except Exception:
+                pass
 
-        try:
-            app_p = r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\Adobe Premiere Pro.exe"
-            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, app_p, 0, winreg.KEY_SET_VALUE) as key:
-                winreg.SetValueEx(key, "", 0, winreg.REG_SZ, r"F:\AdobePremierePro2026\Adobe Premiere Pro.exe")
-                winreg.SetValueEx(key, "Path", 0, winreg.REG_SZ, r"F:\AdobePremierePro2026\\")
-            self.log("Registry Redirection: Updated Windows HKLM App Paths to clean ASCII junction.", "SUCCESS")
-        except Exception:
-            pass
+            # Update Premiere Pro 26.0 presets
+            for root_key, label in [(winreg.HKEY_CURRENT_USER, "HKCU"), (winreg.HKEY_LOCAL_MACHINE, "HKLM")]:
+                try:
+                    prem_k = r"SOFTWARE\Adobe\Premiere Pro\26.0"
+                    opener = winreg.CreateKeyEx if root_key == winreg.HKEY_CURRENT_USER else winreg.OpenKey
+                    with opener(root_key, prem_k, 0, winreg.KEY_SET_VALUE) as key:
+                        winreg.SetValueEx(key, "SequencePresetsPath", 0, winreg.REG_SZ, os.path.join(target_work_dir, r"Settings\SequencePresets"))
+                        winreg.SetValueEx(key, "SequencePreviewPresetsPath", 0, winreg.REG_SZ, os.path.join(target_work_dir, r"Settings\EncoderPresets\SequencePreview"))
+                        winreg.SetValueEx(key, "PluginInstallPath", 0, winreg.REG_SZ, os.path.join(target_work_dir, r"Plug-ins\Common"))
+                        if root_key == winreg.HKEY_CURRENT_USER:
+                            winreg.SetValueEx(key, "RecoveryOpenProjectInfos", 0, winreg.REG_SZ, "")
+                    self.log(f"Registry Redirection: Updated {label} Premiere Pro 26.0 presets & plugin paths.", "SUCCESS")
+                except Exception:
+                    pass
 
-        try:
-            prem_k = r"SOFTWARE\Adobe\Premiere Pro\26.0"
-            with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, prem_k, 0, winreg.KEY_SET_VALUE) as key:
-                winreg.SetValueEx(key, "SequencePresetsPath", 0, winreg.REG_SZ, r"F:\AdobePremierePro2026\Settings\SequencePresets")
-                winreg.SetValueEx(key, "SequencePreviewPresetsPath", 0, winreg.REG_SZ, r"F:\AdobePremierePro2026\Settings\EncoderPresets\SequencePreview")
-                winreg.SetValueEx(key, "PluginInstallPath", 0, winreg.REG_SZ, r"F:\AdobePremierePro2026\Plug-ins\Common")
-            self.log("Registry Redirection: Updated HKLM Premiere Pro 26.0 presets and plugin paths.", "SUCCESS")
-        except Exception:
-            pass
+            # 11. Deploy VC++ runtimes directly into target app directory if missing
+            sys32 = os.path.expandvars(r"%WINDIR%\System32")
+            for dll in ["vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll"]:
+                src_dll = os.path.join(sys32, dll)
+                dst_dll = os.path.join(target_work_dir, dll)
+                if os.path.isfile(src_dll) and not os.path.isfile(dst_dll):
+                    try:
+                        shutil.copy2(src_dll, dst_dll)
+                    except Exception:
+                        pass
 
-        # 11. Fix Start Menu and Desktop shortcuts to point to ASCII junction
-        try:
-            ps_fix_sc = """
-            $wsh = New-Object -ComObject WScript.Shell
-            $scPaths = @(
-                'C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Adobe Premiere Pro 2026.lnk',
-                "$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\Adobe Premiere Pro 2026.lnk",
-                "$env:USERPROFILE\\Desktop\\Adobe Premiere Pro (Repaired).lnk"
-            )
-            foreach ($scPath in $scPaths) {
-                try {
-                    $sc = $wsh.CreateShortcut($scPath)
-                    $sc.TargetPath = 'F:\\AdobePremierePro2026\\Adobe Premiere Pro.exe'
-                    $sc.WorkingDirectory = 'F:\\AdobePremierePro2026'
-                    $sc.Save()
-                } catch {}
-            }
-            """
-            subprocess.run(["powershell", "-NoProfile", "-Command", ps_fix_sc], capture_output=True, timeout=4)
-            self.log("Shortcut Restorer: Re-pointed Start Menu & Desktop shortcuts to F:\\AdobePremierePro2026.", "SUCCESS")
-        except Exception:
-            pass
+            # 12. Fix Start Menu and Desktop shortcuts to point to the real valid executable
+            try:
+                ps_fix_sc = f"""
+                $wsh = New-Object -ComObject WScript.Shell
+                $scPaths = @(
+                    'C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\Adobe Premiere Pro 2026.lnk',
+                    "$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs\\Adobe Premiere Pro 2026.lnk",
+                    "$env:USERPROFILE\\Desktop\\Adobe Premiere Pro (Repaired).lnk"
+                )
+                foreach ($scPath in $scPaths) {{
+                    try {{
+                        $sc = $wsh.CreateShortcut($scPath)
+                        $sc.TargetPath = '{final_prem}'
+                        $sc.WorkingDirectory = '{target_work_dir}'
+                        $sc.Save()
+                    }} catch {{}}
+                }}
+                """
+                subprocess.run(["powershell", "-NoProfile", "-Command", ps_fix_sc], capture_output=True, timeout=4)
+                self.log(f"Shortcut Restorer: Re-pointed Start Menu & Desktop shortcuts to {final_prem}.", "SUCCESS")
+            except Exception:
+                pass
 
         self.log("===================================================================", "SUCCESS")
         self.log("  ✅ PREMIERE PRO 2-MINUTE ANTI-FREEZE PROTOCOL COMPLETED!", "SUCCESS")
@@ -848,7 +966,8 @@ class UniversalAdobeRepairEngine:
             "locks_removed": locks_removed,
             "gpu_locked": gpu_locked,
             "debug_db_patched": dd_patched,
-            "prefs_patched": prefs_patched
+            "prefs_patched": prefs_patched,
+            "primary_prem": final_prem
         }
 
     def fix_runtime_installer_crash(self, target_exes: List[str] = None) -> Dict[str, Any]:
@@ -874,6 +993,9 @@ class UniversalAdobeRepairEngine:
         resolved_exes = list(target_exes or [])
         known_candidates = [
             r"D:\Adobe Suite1\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
+            r"D:\Adobe Suite\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
+            r"D:\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
+            r"D:\AdobePremierePro2026\Adobe Premiere Pro.exe",
             r"F:\AdobePremierePro2026\Adobe Premiere Pro.exe",
             r"F:\Νέος φάκελος (2)\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
             r"C:\Program Files\Adobe\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
@@ -912,23 +1034,47 @@ class UniversalAdobeRepairEngine:
         self.log(f"Licensing Sanitizer: Cleaned {cleared_dirs} corrupt SLStore/SLCache/OOBE runtime databases.", "SUCCESS")
 
         # 3. Grant NTFS Full Permissions on target directories
-        folders_to_grant = [
+        # Grant permissions specifically to licensing roots and application directories
+        licensing_grant = [
+            os.path.expandvars(r"%PROGRAMDATA%\Adobe\SLStore"),
+            os.path.expandvars(r"%PROGRAMDATA%\Adobe\SLData"),
+            os.path.expandvars(r"%COMMONPROGRAMFILES(x86)%\Adobe\SLCache"),
+            os.path.expandvars(r"%COMMONPROGRAMFILES%\Adobe\SLCache"),
+            os.path.expandvars(r"%LOCALAPPDATA%\Adobe\OOBE"),
+            os.path.expandvars(r"%APPDATA%\Adobe\OOBE")
+        ]
+        for l_fld in licensing_grant:
+            if os.path.isdir(l_fld):
+                try:
+                    subprocess.run(
+                        f'icacls "{l_fld}" /grant Everyone:(OI)(CI)F Administrators:(OI)(CI)F Users:(OI)(CI)F /T /C /Q',
+                        shell=True,
+                        capture_output=True,
+                        timeout=3
+                    )
+                except Exception:
+                    pass
+
+        # Grant permissions on base application folders and parent Adobe dirs
+        base_folders = [
             os.path.expandvars(r"%PROGRAMDATA%\Adobe"),
             os.path.expandvars(r"%APPDATA%\Adobe"),
             os.path.expandvars(r"%LOCALAPPDATA%\Adobe")
         ]
         for exe in resolved_exes:
             if os.path.isfile(exe):
-                folders_to_grant.append(os.path.dirname(exe))
+                d = os.path.dirname(exe)
+                if d not in base_folders:
+                    base_folders.append(d)
 
-        for fld in folders_to_grant:
+        for fld in base_folders:
             if os.path.isdir(fld):
                 try:
                     subprocess.run(
-                        f'icacls "{fld}" /grant Everyone:(OI)(CI)F Administrators:(OI)(CI)F Users:(OI)(CI)F /T /C /Q',
+                        f'icacls "{fld}" /grant Everyone:(OI)(CI)F Administrators:(OI)(CI)F Users:(OI)(CI)F /C /Q',
                         shell=True,
                         capture_output=True,
-                        timeout=5
+                        timeout=2
                     )
                 except Exception:
                     pass
@@ -972,7 +1118,7 @@ class UniversalAdobeRepairEngine:
             "ExporterMPEG4.Feature.Allow_Nvidia_HW_Export": ("true", "true"),
             "Player.DirectXAcceleratedRenderer": ("true", "true")
         }
-        userprofile = os.environ.get("USERPROFILE", r"C:\Users\marth")
+        userprofile = os.environ.get("USERPROFILE", "")
         appdata_prem = os.path.join(userprofile, r"AppData\Roaming\Adobe\Premiere Pro")
         dd_targets = []
         if os.path.isdir(appdata_prem):
