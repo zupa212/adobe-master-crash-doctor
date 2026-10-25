@@ -83,7 +83,7 @@ $permDirs = @(
 )
 foreach ($pd in $permDirs) {
     if (Test-Path $pd) {
-        icacls "$pd" /grant Everyone:(OI)(CI)F Administrators:(OI)(CI)F /C /Q | Out-Null
+        icacls "$pd" /grant "Everyone:(OI)(CI)F" "Administrators:(OI)(CI)F" /C /Q | Out-Null
     }
 }
 Write-Host "[OK] NTFS security permissions unlocked." -ForegroundColor Green
