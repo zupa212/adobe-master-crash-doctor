@@ -60,6 +60,8 @@ class AdobeMasterDoctorApp(ctk.CTk):
         self.opt_firewall = ctk.BooleanVar(value=True)
         self.opt_credentials = ctk.BooleanVar(value=True)
         self.opt_shortcuts = ctk.BooleanVar(value=True)
+        self.opt_fix_runtime = ctk.BooleanVar(value=True)
+        self.opt_fix_freeze = ctk.BooleanVar(value=True)
 
         self.setup_ui()
         self.run_diagnostics_thread()
@@ -540,6 +542,9 @@ class AdobeMasterDoctorApp(ctk.CTk):
         ctk.CTkCheckBox(chk_grid, text="8. Purge Stale Credential Vault", variable=self.opt_credentials).grid(row=2, column=1, padx=5, pady=6, sticky="w")
         ctk.CTkCheckBox(chk_grid, text="9. Create Repaired Desktop Shortcut", variable=self.opt_shortcuts).grid(row=2, column=2, padx=5, pady=6, sticky="w")
 
+        ctk.CTkCheckBox(chk_grid, text="10. Fix RuntimeInstaller (0xc0000005)", variable=self.opt_fix_runtime).grid(row=3, column=0, padx=5, pady=6, sticky="w")
+        ctk.CTkCheckBox(chk_grid, text="11. Fix Premiere 2-Min Freeze", variable=self.opt_fix_freeze).grid(row=3, column=1, padx=5, pady=6, sticky="w")
+
         self.btn_run_custom = ctk.CTkButton(
             custom_box,
             text="🛠️ ΕΚΤΕΛΕΣΗ CUSTOM 1-CLICK ΕΠΙΔΙΟΡΘΩΣΗΣ (RUN MY SELECTION)",
@@ -1001,16 +1006,21 @@ class AdobeMasterDoctorApp(ctk.CTk):
                 drives = self.scanner.get_all_logical_drives()
                 res = self.u_repair.execute_complete_universal_repair(self.diag_data.get("installations", []), drives)
                 self.logger.success("⚡ Complete 1-Click Universal Fix successfully executed!")
+                rt_info = res.get("runtime_installer", {})
+                frz_info = res.get("freeze", {})
                 self.after(0, lambda: messagebox.showinfo(
                     "Universal Fix Complete",
-                    f"Η επιδιόρθωση ολοκληρώθηκε επιτυχώς για όλες τις εφαρμογές Adobe!\n\n"
-                    f"• NTFS ASCII Junctions: {res['junctions_created']}\n"
-                    f"• High-Performance GPU Overrides: {res['gpu_overrides']}\n"
-                    f"• Font Cache Files Purged: {res['font_caches_purged']}\n"
-                    f"• Media & Scratch Reclaimed: {res['cache_purged']['freed_mb']} MB\n"
-                    f"• Plugin & Hardware Registries Reset: {res['plugin_resets']}\n"
-                    f"• Firewall Loopback Rules Configured: {res['firewall_rules']}\n"
-                    f"• Stale Credentials Purged: {res['credentials_purged']}"
+                    f"Η πλήρης επιδιόρθωση ολοκληρώθηκε επιτυχώς για όλες τις εφαρμογές Adobe!\n\n"
+                    f"• 🛡️ RuntimeInstaller.DLL Fix: {rt_info.get('cleared_dirs', 0)} βάσεις SLStore/SLCache/OOBE & δικαιώματα NTFS Full Control\n"
+                    f"• 🧊 Premiere 2-Min Anti-Freeze: {frz_info.get('debug_db_patched', 0)} debug databases & MISO audio AI bypass ενεργό\n"
+                    f"• 🔗 NTFS ASCII Junctions: {res['junctions_created']}\n"
+                    f"• 🎮 High-Performance GPU Overrides: {res['gpu_overrides']}\n"
+                    f"• 🔤 Font Cache Files Purged: {res['font_caches_purged']}\n"
+                    f"• 💾 Media & Scratch Reclaimed: {res['cache_purged']['freed_mb']} MB\n"
+                    f"• 🔌 Plugin & Hardware Registries Reset: {res['plugin_resets']}\n"
+                    f"• 🧱 Firewall Loopback Rules Configured: {res['firewall_rules']}\n"
+                    f"• 🔑 Stale Credentials Purged: {res['credentials_purged']}\n\n"
+                    f"Μπορείτε τώρα να ανοίξετε το Premiere Pro και όλες τις εφαρμογές Adobe χωρίς κανένα κόλλημα!"
                 ))
             except Exception as e:
                 self.logger.error(f"Error during universal repair: {e}")
@@ -1037,7 +1047,9 @@ class AdobeMasterDoctorApp(ctk.CTk):
             "reset_plugins": self.opt_reset_plugins.get(),
             "firewall_rules": self.opt_firewall.get(),
             "purge_credentials": self.opt_credentials.get(),
-            "create_shortcuts": self.opt_shortcuts.get()
+            "create_shortcuts": self.opt_shortcuts.get(),
+            "fix_runtime_installer": self.opt_fix_runtime.get(),
+            "fix_freeze": self.opt_fix_freeze.get()
         }
 
         def _worker():

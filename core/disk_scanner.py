@@ -63,12 +63,20 @@ class MultiDiskScanner:
             r"Program Files\Adobe",
             r"Program Files (x86)\Adobe",
             r"Adobe",
+            r"Adobe Suite1",
+            r"Adobe Suite",
+            r"Adobe Suite 2026",
+            r"Adobe Suite 2025",
+            r"Adobe 2026",
+            r"Adobe 2025",
             r"Adobe Premiere Pro",
             r"AdobePremierePro",
             r"Apps\Adobe",
             r"Software\Adobe",
             r"Portable\Adobe",
-            r"ProgramData\Adobe"
+            r"ProgramData\Adobe",
+            r"Adobe Master Collection",
+            r"Master Collection"
         ]
 
         for d in drives:
@@ -78,7 +86,7 @@ class MultiDiskScanner:
                 if os.path.isdir(target_p):
                     for root, dirs, files in os.walk(target_p):
                         depth = root[len(target_p):].count(os.sep)
-                        if depth > 3:
+                        if depth > 4:
                             del dirs[:]
                             continue
                         for f in files:
@@ -95,10 +103,10 @@ class MultiDiskScanner:
                     if os.path.isdir(item_path):
                         item_lower = item.lower()
                         # If folder has "adobe" or non-ascii Greek name or app names
-                        if any(k in item_lower for k in ["adobe", "premiere", "photoshop", "after effects", "illustrator"]) or not self.is_ascii(item):
+                        if any(k in item_lower for k in ["adobe", "premiere", "photoshop", "after effects", "illustrator", "suite", "apps", "editing", "video", "repack", "monkrus"]) or not self.is_ascii(item):
                             for root, dirs, files in os.walk(item_path):
                                 depth = root[len(item_path):].count(os.sep)
-                                if depth > 3:
+                                if depth > 4:
                                     del dirs[:]
                                     continue
                                 for f in files:

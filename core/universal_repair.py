@@ -305,7 +305,9 @@ class UniversalAdobeRepairEngine:
             "reset_plugins": True,
             "firewall_rules": True,
             "purge_credentials": True,
-            "create_shortcuts": True
+            "create_shortcuts": True,
+            "fix_runtime_installer": True,
+            "fix_freeze": True
         }
         opts = default_opts.copy()
         if options:
@@ -383,8 +385,18 @@ class UniversalAdobeRepairEngine:
         if opts.get("purge_credentials"):
             cred_count = self.purge_stale_credentials()
 
+        # 9. Purge corrupt licensing & fix RuntimeInstaller.DLL 0xc0000005 APPCRASH
+        runtime_res = {}
+        if opts.get("fix_runtime_installer"):
+            runtime_res = self.fix_runtime_installer_crash(valid_exes)
+
+        # 10. Fix Premiere Pro 2-Minute Freeze & Audio Sleep Deadlocks
+        freeze_res = {}
+        if opts.get("fix_freeze"):
+            freeze_res = self.fix_premiere_pro_freeze(target_apps)
+
         self.log("===================================================================", "SUCCESS")
-        self.log("  ⚡ CUSTOM 1-CLICK UNIVERSAL REPAIR COMPLETED SUCCESSFULLY!", "SUCCESS")
+        self.log("  ⚡ 1-CLICK UNIVERSAL REPAIR ENGINE COMPLETED SUCCESSFULLY!", "SUCCESS")
         self.log("===================================================================", "SUCCESS")
 
         return {
@@ -395,7 +407,9 @@ class UniversalAdobeRepairEngine:
             "cache_purged": cache_res,
             "plugin_resets": plugin_resets,
             "firewall_rules": fw_count,
-            "credentials_purged": cred_count
+            "credentials_purged": cred_count,
+            "runtime_installer": runtime_res,
+            "freeze": freeze_res
         }
 
     def execute_complete_universal_repair(self, all_detected_apps: List[Dict[str, Any]], all_drives: List[str] = None) -> Dict[str, Any]:

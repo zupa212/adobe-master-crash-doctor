@@ -19,13 +19,15 @@ def find_premiere_executable():
 
     # 2. Known local paths and active junctions
     prioritized = [
+        r"D:\Adobe Suite1\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
+        r"D:\Adobe Suite\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
+        r"D:\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
+        r"D:\AdobePremierePro2026\Adobe Premiere Pro.exe",
         r"F:\AdobePremierePro2026\Adobe Premiere Pro.exe",
         r"F:\Νέος φάκελος (2)\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
         r"C:\Program Files\Adobe\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
         r"C:\Program Files\Adobe\Adobe Premiere Pro 2025\Adobe Premiere Pro.exe",
-        r"C:\Program Files\Adobe\Adobe Premiere Pro 2024\Adobe Premiere Pro.exe",
-        r"D:\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
-        r"D:\AdobePremierePro2026\Adobe Premiere Pro.exe"
+        r"C:\Program Files\Adobe\Adobe Premiere Pro 2024\Adobe Premiere Pro.exe"
     ]
     for p in prioritized:
         if os.path.isfile(p):
@@ -34,7 +36,7 @@ def find_premiere_executable():
     # 3. Dynamic scan across all fixed and removable drives
     drives = [f"{d}:\\" for d in "CDEFGHIJKLMNOPQRSTUVWXYZ" if os.path.exists(f"{d}:\\")]
     for drive in drives:
-        for root_folder in ["Program Files\\Adobe", "Adobe", ""]:
+        for root_folder in ["Program Files\\Adobe", "Adobe Suite1", "Adobe Suite", "Adobe", "Apps\\Adobe", ""]:
             target_dir = os.path.join(drive, root_folder) if root_folder else drive
             if os.path.isdir(target_dir):
                 try:
@@ -172,6 +174,50 @@ def ensure_repaired_launch():
         pass
 
     work_dir = os.path.dirname(final_exe)
+
+    # 1. Deploy Microsoft Visual C++ 2015-2022 runtimes into app folder if missing
+    try:
+        sys32 = os.path.expandvars(r"%WINDIR%\System32")
+        for dll in ["vcruntime140.dll", "vcruntime140_1.dll", "msvcp140.dll"]:
+            src_dll = os.path.join(sys32, dll)
+            dst_dll = os.path.join(work_dir, dll)
+            if os.path.isfile(src_dll) and not os.path.isfile(dst_dll):
+                try:
+                    import shutil
+                    shutil.copy2(src_dll, dst_dll)
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+    # 2. Grant Full Control NTFS permissions on working directory
+    try:
+        subprocess.run(
+            f'icacls "{work_dir}" /grant Everyone:(OI)(CI)F Administrators:(OI)(CI)F Users:(OI)(CI)F /T /C /Q',
+            shell=True,
+            capture_output=True,
+            timeout=3
+        )
+    except Exception:
+        pass
+
+    # 3. Purge corrupt licensing databases (SLStore/SLCache/OOBE) that cause RuntimeInstaller.dll 0xc0000005
+    try:
+        lic_paths = [
+            os.path.expandvars(r"%PROGRAMDATA%\Adobe\SLStore"),
+            os.path.expandvars(r"%COMMONPROGRAMFILES(x86)%\Adobe\SLCache"),
+            os.path.expandvars(r"%LOCALAPPDATA%\Adobe\OOBE")
+        ]
+        for lp in lic_paths:
+            if os.path.isdir(lp):
+                for root, _, files in os.walk(lp):
+                    for f in files:
+                        try:
+                            os.remove(os.path.join(root, f))
+                        except Exception:
+                            pass
+    except Exception:
+        pass
 
     # Ensure missing plugin directory exists
     try:
