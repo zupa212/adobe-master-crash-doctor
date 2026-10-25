@@ -30,28 +30,31 @@ class OTAUpdateEngine:
 
     def send_telemetry(self, action: str, extra: Optional[Dict[str, Any]] = None):
         """Sends telemetry ping to Vercel so activity is recorded live in Vercel Dashboard logs."""
-        try:
-            payload = {
-                "action": action,
-                "user": os.environ.get("USERNAME", "Creator"),
-                "client_version": self.current_version,
-                "client_build": self.current_build,
-                "target_version": CURRENT_VERSION,
-                "os": f"Windows {os.environ.get('PROCESSOR_ARCHITECTURE', 'x64')}"
-            }
-            if extra:
-                payload.update(extra)
+        import threading
+        def _worker():
+            try:
+                payload = {
+                    "action": action,
+                    "user": os.environ.get("USERNAME", "Creator"),
+                    "client_version": self.current_version,
+                    "client_build": self.current_build,
+                    "target_version": CURRENT_VERSION,
+                    "os": f"Windows {os.environ.get('PROCESSOR_ARCHITECTURE', 'x64')}"
+                }
+                if extra:
+                    payload.update(extra)
 
-            url = f"{TELEMETRY_URL}?t={int(time.time())}"
-            data = json.dumps(payload).encode("utf-8")
-            req = urllib.request.Request(
-                url,
-                data=data,
-                headers={"Content-Type": "application/json", "User-Agent": "AdobeMasterCrashDoctor-OTA"}
-            )
-            urllib.request.urlopen(req, timeout=3)
-        except Exception:
-            pass
+                url = f"{TELEMETRY_URL}?t={int(time.time())}"
+                data = json.dumps(payload).encode("utf-8")
+                req = urllib.request.Request(
+                    url,
+                    data=data,
+                    headers={"Content-Type": "application/json", "User-Agent": "AdobeMasterCrashDoctor-OTA"}
+                )
+                urllib.request.urlopen(req, timeout=4)
+            except Exception:
+                pass
+        threading.Thread(target=_worker, daemon=True).start()
 
     def check_for_updates(self, hardware_profile: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """

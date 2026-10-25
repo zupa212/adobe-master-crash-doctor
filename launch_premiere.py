@@ -364,6 +364,24 @@ def ensure_repaired_launch():
     except Exception:
         pass
 
+    # Send non-blocking launch telemetry to Vercel
+    try:
+        import urllib.request, json
+        telem_payload = {
+            "action": "premiere_launched",
+            "user": os.environ.get("USERNAME", "Creator"),
+            "client_version": "1.2.5",
+            "details": os.path.basename(final_exe) + " @ " + final_exe
+        }
+        req = urllib.request.Request(
+            "https://premiere-pro-doctor.vercel.app/api/ota-telemetry",
+            data=json.dumps(telem_payload).encode("utf-8"),
+            headers={"Content-Type": "application/json", "User-Agent": "AdobePremiereRepairedLauncher"}
+        )
+        urllib.request.urlopen(req, timeout=3)
+    except Exception:
+        pass
+
     # Launch Premiere Pro in clean detached mode
     subprocess.Popen(
         [final_exe],

@@ -21,29 +21,57 @@ export default async function handler(req, res) {
   }
 
   const action = body.action || body.event || 'general_ping';
-  const user = body.user || 'Unknown';
-  const clientVersion = body.client_version || 'Unknown';
-  const targetVersion = body.target_version || '1.2.4';
-  const hardware = body.hardware || body.gpu || 'Hardware';
+  const user = body.user || 'Creator';
+  const clientVersion = body.client_version || '1.2.5';
+  const targetVersion = body.target_version || '1.2.5';
+  const hardware = body.hardware || body.gpu || 'Discrete GPU / Multi-Core';
+  const details = body.details || '';
   const timestamp = new Date().toISOString();
 
   let logMessage = '';
   let eventType = 'TELEMETRY';
 
-  if (action === 'download_started' || action === 'click_download') {
-    eventType = 'OTA_DOWNLOAD_STARTED';
-    logMessage = `📥 [OTA DOWNLOAD STARTED] IP: ${clientIp} (${city}, ${country}) | User: ${user} | Client v${clientVersion} -> Downloading v${targetVersion} | Hardware: ${hardware}`;
-  } else if (action === 'download_completed') {
-    eventType = 'OTA_DOWNLOAD_COMPLETE';
-    logMessage = `📦 [OTA DOWNLOAD COMPLETE] IP: ${clientIp} (${city}, ${country}) | User: ${user} | Binary v${targetVersion} verified on disk!`;
-  } else if (action === 'update_applied' || action === 'updater_spawned') {
-    eventType = 'OTA_UPDATE_APPLIED';
-    logMessage = `🚀 [OTA UPDATE APPLIED] IP: ${clientIp} (${city}, ${country}) | User: ${user} | Successfully patched from v${clientVersion} -> Relaunching v${targetVersion}!`;
-  } else {
-    logMessage = `ℹ️ [OTA TELEMETRY: ${action.toUpperCase()}] IP: ${clientIp} (${city}, ${country}) | User: ${user} | v${clientVersion} | Event: ${action}`;
+  switch (action) {
+    case 'download_started':
+    case 'click_download':
+      eventType = 'OTA_DOWNLOAD_STARTED';
+      logMessage = `📥 [OTA DOWNLOAD STARTED] IP: ${clientIp} (${city}, ${country}) | User: ${user} | Client: v${clientVersion} -> Target: v${targetVersion} | Hardware: ${hardware}`;
+      break;
+    case 'download_completed':
+      eventType = 'OTA_DOWNLOAD_COMPLETE';
+      logMessage = `📦 [OTA DOWNLOAD COMPLETE] IP: ${clientIp} (${city}, ${country}) | User: ${user} | Binary v${targetVersion} verified on client disk!`;
+      break;
+    case 'update_applied':
+    case 'updater_spawned':
+      eventType = 'OTA_UPDATE_APPLIED';
+      logMessage = `🚀 [OTA UPDATE APPLIED] IP: ${clientIp} (${city}, ${country}) | User: ${user} | Hot-patch applied v${clientVersion} -> Relaunched v${targetVersion}!`;
+      break;
+    case 'app_started':
+      eventType = 'APP_STARTED';
+      logMessage = `💻 [APP ONLINE] IP: ${clientIp} (${city}, ${country}) | User: ${user} | v${clientVersion} | Hardware: ${hardware}`;
+      break;
+    case 'repair_runtime_installer':
+      eventType = 'RUNTIME_INSTALLER_REPAIRED';
+      logMessage = `🛡️ [RUNTIMEINSTALLER 0xC0000005 CURED] IP: ${clientIp} (${city}, ${country}) | User: ${user} | SLStore/SLCache purged & NTFS Full Control unlocked! | Hardware: ${hardware}`;
+      break;
+    case 'repair_universal':
+      eventType = 'UNIVERSAL_REPAIR_EXECUTED';
+      logMessage = `🚀 [1-CLICK UNIVERSAL REPAIR] IP: ${clientIp} (${city}, ${country}) | User: ${user} | Full Suite Healed | Details: ${details || 'All modules executed'}`;
+      break;
+    case 'premiere_launched':
+      eventType = 'PREMIERE_LAUNCHED';
+      logMessage = `🎬 [PREMIERE LAUNCHED VIA REPAIRED ENGINE] IP: ${clientIp} (${city}, ${country}) | User: ${user} | Launch Target: ${details || 'Premiere Pro 2026'}`;
+      break;
+    case 'crash_detected':
+      eventType = 'CRASH_REPORTED';
+      logMessage = `⚠️ [CRASH REPORTED BY CLIENT] IP: ${clientIp} (${city}, ${country}) | User: ${user} | Details: ${details}`;
+      break;
+    default:
+      logMessage = `📡 [TELEMETRY: ${action.toUpperCase()}] IP: ${clientIp} (${city}, ${country}) | User: ${user} | v${clientVersion} | Event: ${action} | Details: ${details}`;
+      break;
   }
 
-  // Print to Vercel Runtime Logs
+  // Print directly to Vercel console logs
   console.log(logMessage);
 
   const eventObj = {

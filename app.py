@@ -58,6 +58,12 @@ class AdobeMasterDoctorApp(ctk.CTk):
         self.scanner = MultiDiskScanner(self.logger)
         self.nuclear = NuclearPurgeEngine(self.logger)
         self.cc_cleaner = AdobeCreativeCloudCleaner(self.logger)
+
+        # Dispatch online status telemetry to Vercel
+        try:
+            self.ota.send_telemetry("app_started")
+        except Exception:
+            pass
         self.deep_healer = DeepRegistryHealer(self.logger)
         self.inspector = SystemInspector(self.logger)
 
@@ -1099,6 +1105,12 @@ class AdobeMasterDoctorApp(ctk.CTk):
                     exes.append(custom_exe)
                 res = self.u_repair.fix_runtime_installer_crash(exes)
                 self.logger.success("🛡️ RuntimeInstaller.dll (0xc0000005) fix executed successfully!")
+                try:
+                    self.ota.send_telemetry("repair_runtime_installer", {
+                        "details": f"Cleaned {res.get('cleared_dirs', 0)} SLStore DBs | Resolved: {len(res.get('resolved_exes', []))} EXEs"
+                    })
+                except Exception:
+                    pass
                 self.after(0, lambda: messagebox.showinfo(
                     "RuntimeInstaller Fix Complete",
                     f"Η επιδιόρθωση του RuntimeInstaller.dll (0xc0000005) ολοκληρώθηκε!\n\n"
@@ -1131,6 +1143,12 @@ class AdobeMasterDoctorApp(ctk.CTk):
                 drives = self.scanner.get_all_logical_drives()
                 res = self.u_repair.execute_complete_universal_repair(self.diag_data.get("installations", []), drives)
                 self.logger.success("⚡ Complete 1-Click Universal Fix successfully executed!")
+                try:
+                    self.ota.send_telemetry("repair_universal", {
+                        "details": f"Junctions: {res.get('junctions_created', 0)} | GPU: {res.get('gpu_overrides', 0)} | Cache Freed: {res.get('cache_purged', {}).get('freed_mb', 0)} MB"
+                    })
+                except Exception:
+                    pass
                 rt_info = res.get("runtime_installer", {})
                 frz_info = res.get("freeze", {})
                 self.after(0, lambda: messagebox.showinfo(

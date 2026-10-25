@@ -1,4 +1,4 @@
-globalThis.__otaLogs = globalThis.__otaLogs || [];
+import { recordEvent } from './_store.js';
 
 export default async function handler(req, res) {
   const clientIp = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.headers['x-real-ip'] || req.socket.remoteAddress || '127.0.0.1';
@@ -16,7 +16,7 @@ export default async function handler(req, res) {
 
   console.log(`📥 [DIRECT WEB DOWNLOAD] IP: ${clientIp} (${city}, ${country}) | File: ${fileName} | UA: ${userAgent} | Referer: ${referer}`);
 
-  globalThis.__otaLogs.unshift({
+  recordEvent({
     id: Date.now() + '-' + Math.random().toString(36).substring(2, 6),
     type: 'WEB_DOWNLOAD',
     timestamp: new Date().toISOString(),
@@ -26,10 +26,6 @@ export default async function handler(req, res) {
     fileName,
     referer
   });
-
-  if (globalThis.__otaLogs.length > 100) {
-    globalThis.__otaLogs.pop();
-  }
 
   // 302 Redirect to direct executable binary
   res.redirect(302, targetUrl);
