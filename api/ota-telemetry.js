@@ -22,10 +22,16 @@ export default async function handler(req, res) {
 
   const action = body.action || body.event || 'general_ping';
   const user = body.user || 'Creator';
-  const clientVersion = body.client_version || '1.2.5';
-  const targetVersion = body.target_version || '1.2.5';
+  const clientVersion = body.client_version || '1.2.8';
+  const targetVersion = body.target_version || '1.2.8';
   const hardware = body.hardware || body.gpu || 'Discrete GPU / Multi-Core';
   const details = body.details || '';
+  const crashModule = body.crash_module || body.fault_module || '';
+  const exceptionCode = body.exception_code || '';
+  const faultOffset = body.fault_offset || '';
+  const pid = body.pid || '';
+  const ramMb = body.ram_mb || '';
+  const step = body.step || '';
   const timestamp = new Date().toISOString();
 
   let logMessage = '';
@@ -34,8 +40,27 @@ export default async function handler(req, res) {
   switch (action) {
     case 'stream_step':
       eventType = 'STREAM_STEP';
-      const stepNum = body.step || '•';
-      logMessage = `📡 [LIVE STREAM ${stepNum}] IP: ${clientIp} (${city}, ${country}) | User: ${user} | ${details} | Hardware: ${hardware}`;
+      logMessage = `📡 [STEP ${step || '•'}] IP: ${clientIp} (${city}, ${country}) | User: ${user} | ${details} | HW: ${hardware}`;
+      break;
+    case 'crash_dump':
+      eventType = 'CRASH_DUMP_FORENSIC';
+      logMessage = `🚨 [CRASH DUMP CAPTURED] IP: ${clientIp} (${city}, ${country}) | User: ${user} | Module: ${crashModule} | Code: ${exceptionCode} | Offset: ${faultOffset} | Details: ${details}`;
+      break;
+    case 'watchdog_heartbeat':
+      eventType = 'WATCHDOG_HEARTBEAT';
+      logMessage = `💓 [WATCHDOG HEARTBEAT] IP: ${clientIp} | User: ${user} | PID: ${pid} | RAM: ${ramMb} MB | ${details}`;
+      break;
+    case 'watchdog_crash':
+      eventType = 'WATCHDOG_CRASH_DETECTED';
+      logMessage = `💥 [WATCHDOG CRASH] IP: ${clientIp} | User: ${user} | Premature exit code: ${body.exit_code || 'Unknown'} | Module: ${crashModule} | ${details}`;
+      break;
+    case 'watchdog_success':
+      eventType = 'WATCHDOG_SUCCESS_STABLE';
+      logMessage = `🎉 [WATCHDOG VERIFIED] IP: ${clientIp} | User: ${user} | Premiere Pro 2026 is stable & responsive! | RAM: ${ramMb} MB`;
+      break;
+    case 'broadcast_capture':
+      eventType = 'BROADCAST_TRIGGERED';
+      logMessage = `📡 [OPERATOR BROADCAST] IP: ${clientIp} | Triggered Live Capture command for client ${user}`;
       break;
     case 'download_started':
     case 'click_download':
@@ -57,7 +82,7 @@ export default async function handler(req, res) {
       break;
     case 'repair_runtime_installer':
       eventType = 'RUNTIME_INSTALLER_REPAIRED';
-      logMessage = `🛡️ [RUNTIMEINSTALLER 0xC0000005 CURED] IP: ${clientIp} (${city}, ${country}) | User: ${user} | SLStore/SLCache purged & NTFS Full Control unlocked! | Hardware: ${hardware}`;
+      logMessage = `🛡️ [RUNTIMEINSTALLER CURED] IP: ${clientIp} (${city}, ${country}) | User: ${user} | SLStore/SLCache purged & NTFS Full Control unlocked! | Hardware: ${hardware}`;
       break;
     case 'repair_universal':
       eventType = 'UNIVERSAL_REPAIR_EXECUTED';
@@ -90,7 +115,14 @@ export default async function handler(req, res) {
     user,
     clientVersion,
     targetVersion,
-    hardware
+    hardware,
+    details,
+    crash_module: crashModule,
+    exception_code: exceptionCode,
+    fault_offset: faultOffset,
+    pid,
+    ram_mb: ramMb,
+    step
   };
 
   recordEvent(eventObj);

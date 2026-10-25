@@ -14,6 +14,6 @@ export default async function handler(req, res) {
   return res.status(200).json({
     status: 'ok',
     total_recorded_events: events.length,
-    events: events.slice(0, 50)
+    events: events.slice(0, 100)
   });
 }
