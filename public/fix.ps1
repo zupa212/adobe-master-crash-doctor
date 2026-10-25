@@ -285,6 +285,15 @@ MF.EnableDirectoryPolling	false	false
 EA.MediaFinder.EnableSyncDirectoryScanForFastMediaSearch	false	false
 dunamis-force-immediate-send	false	false
 dvasystemcompatibilityreport.use_installed_blocklist	false	false
+Text.DirectWriteEnabled	false	false
+Text.EnableDirectWrite	false	false
+Text.FreetypeFallback	true	true
+Text.DisableFontCachePolling	true	true
+ATE.UseFallbackFontForMissingGlyphs	true	true
+EA.Text.FallbackToSystemFont	true	true
+MOGRT.DisableFontSync	true	true
+DS.DirectWriteTextRendering	false	false
+Text.ShowFontPreviewsInList	false	false
 "@
 
 $patchedCount = 0
@@ -324,8 +333,21 @@ if (Test-Path $userAppdataPrem) {
     Remove-Item -Path "$userAppdataPrem\BadPlugins.txt" -Force -ErrorAction SilentlyContinue
 }
 
-# Purge corrupt Adobe font cache
-Get-ChildItem -Path "$env:LOCALAPPDATA\Adobe", "$env:APPDATA\Adobe" -Include "AdobeFnt*.lst" -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+# Purge corrupt Adobe font cache, TypeSupport & Essential Graphics MOGRT caches (TXT.dll 0xc0000005 Cure)
+$fontPurgeDirs = @(
+    "$env:LOCALAPPDATA\Adobe\TypeSupport",
+    "$env:APPDATA\Adobe\TypeSupport",
+    "$env:LOCALAPPDATA\Adobe\Premiere Pro\26.0\FontCache",
+    "$env:APPDATA\Adobe\Premiere Pro\26.0\FontCache",
+    "$env:LOCALAPPDATA\Adobe\Common\Motion Graphics Templates",
+    "$env:APPDATA\Adobe\Common\Motion Graphics Templates",
+    "$env:LOCALAPPDATA\Adobe\Common\Essential Graphics",
+    "$env:APPDATA\Adobe\Common\Essential Graphics"
+)
+foreach ($fpd in $fontPurgeDirs) {
+    if (Test-Path $fpd) { Remove-Item -Path $fpd -Recurse -Force -ErrorAction SilentlyContinue }
+}
+Get-ChildItem -Path "$env:LOCALAPPDATA\Adobe", "$env:APPDATA\Adobe", "$env:ProgramData\Adobe" -Include "AdobeFnt*.lst", "AdobeSysFnt*.lst" -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 
 Write-Host "       [OK] Injected $patchedCount anti-crash databases, mirrored VC++ runtimes & cleared corrupt caches." -ForegroundColor Green
 Send-LiveLog -Step "9/11" -Message "Patched $patchedCount Debug Databases (Anti-Freeze, VR Bypass, CUDA) & cleaned workspaces"
