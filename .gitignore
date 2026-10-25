@@ -24,3 +24,5 @@ Desktop.ini
 build/
 dist/
 *.spec
+
+.vercel

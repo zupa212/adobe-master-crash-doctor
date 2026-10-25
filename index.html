@@ -606,6 +606,79 @@
       .compare-grid { grid-template-columns: 1fr; }
       .nav-links { display: none; }
     }
+
+    /* Infinite Scrolling Marquee Banner */
+    .marquee-container {
+      width: 100%;
+      overflow: hidden;
+      white-space: nowrap;
+      position: relative;
+      padding: 16px 0;
+      background: linear-gradient(90deg, rgba(7, 9, 14, 0.98), rgba(15, 23, 42, 0.85), rgba(7, 9, 14, 0.98));
+      border-top: 1px solid rgba(56, 189, 248, 0.25);
+      border-bottom: 1px solid rgba(56, 189, 248, 0.25);
+      margin: 40px 0 20px;
+      box-shadow: 0 0 30px rgba(56, 189, 248, 0.08);
+    }
+    .marquee-container::before,
+    .marquee-container::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      width: 120px;
+      height: 100%;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .marquee-container::before {
+      left: 0;
+      background: linear-gradient(90deg, var(--bg-dark), transparent);
+    }
+    .marquee-container::after {
+      right: 0;
+      background: linear-gradient(270deg, var(--bg-dark), transparent);
+    }
+    .marquee-track {
+      display: inline-flex;
+      gap: 20px;
+      animation: marqueeScroll 26s linear infinite;
+    }
+    .marquee-track:hover {
+      animation-play-state: paused;
+    }
+    @keyframes marqueeScroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .marquee-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(30, 41, 59, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 9999px;
+      padding: 9px 22px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      color: #f8fafc;
+      transition: all 0.2s ease;
+      cursor: default;
+    }
+    .marquee-pill:hover {
+      background: rgba(56, 189, 248, 0.18);
+      border-color: rgba(56, 189, 248, 0.45);
+      transform: translateY(-2px);
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.2);
+    }
+    .marquee-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 10px var(--primary);
+    }
+
   </style>
 </head>
 <body>
@@ -683,6 +756,37 @@
       </div>
     </div>
   </section>
+
+  <!-- Infinite Cyber Marquee Banner -->
+  <div class="marquee-container">
+    <div class="marquee-track">
+      <!-- Set 1 -->
+      <div class="marquee-pill"><span class="marquee-dot"></span> ⚡ 1-Click Universal Repair</div>
+      <div class="marquee-pill"><span class="marquee-dot"></span> 🛡️ RuntimeInstaller.DLL 0xc0000005 Fix</div>
+      <div class="marquee-pill"><span class="marquee-dot"></span> 🧊 Premiere Pro 2-Minute Anti-Freeze</div>
+      <div class="marquee-pill"><span class="marquee-dot"></span> 🎮 Dual-GPU Mercury Acceleration</div>
+      <div class="marquee-pill"><span class="marquee-dot"></span> 💾 Multi-Disk NVMe & D:\ Drive Scanner</div>
+      <div class="marquee-pill"><span class="marquee-dot"></span> 🚀 100% Native Standalone .EXE</div>
+      <div class="marquee-pill"><span class="marquee-dot"></span> 📡 Over-The-Air (OTA) Live Updates</div>
+      <div class="marquee-pill"><span class="marquee-dot"></span> 🔥 CC Root Purge & Nuclear Cleaner</div>
+      <div class="marquee-pill"><span class="marquee-dot"></span> 🎧 MISO Audio AI Deadlock Bypass</div>
+      <div class="marquee-pill"><span class="marquee-dot"></span> 🧱 Windows DirectX UserGpuPreferences</div>
+      <div class="marquee-pill"><span class="marquee-dot"></span> 🔒 NTFS Full Control Security Restorer</div>
+
+      <!-- Set 2 (for seamless infinite loop) -->
+      <div class="marquee-pill"><span class="marquee-dot"></span> ⚡ 1-Click Universal Repair</div>
+      <div class="marquee-pill"><span class="marquee-dot"></span> 🛡️ RuntimeInstaller.DLL 0xc0000005 Fix</div>
+      <div class="marquee-pill"><span class="marquee-dot"></span> 🧊 Premiere Pro 2-Minute Anti-Freeze</div>
+      <div class="marquee-pill"><span class="marquee-dot"></span> 🎮 Dual-GPU Mercury Acceleration</div>
+      <div class="marquee-pill"><span class="marquee-dot"></span> 💾 Multi-Disk NVMe & D:\ Drive Scanner</div>
+      <div class="marquee-pill"><span class="marquee-dot"></span> 🚀 100% Native Standalone .EXE</div>
+      <div class="marquee-pill"><span class="marquee-dot"></span> 📡 Over-The-Air (OTA) Live Updates</div>
+      <div class="marquee-pill"><span class="marquee-dot"></span> 🔥 CC Root Purge & Nuclear Cleaner</div>
+      <div class="marquee-pill"><span class="marquee-dot"></span> 🎧 MISO Audio AI Deadlock Bypass</div>
+      <div class="marquee-pill"><span class="marquee-dot"></span> 🧱 Windows DirectX UserGpuPreferences</div>
+      <div class="marquee-pill"><span class="marquee-dot"></span> 🔒 NTFS Full Control Security Restorer</div>
+    </div>
+  </div>
 
   <!-- Problem Solvers Grid -->
   <section id="features" class="container">
