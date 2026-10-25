@@ -1,4 +1,4 @@
-import { recordEvent } from './_store.js';
+import { recordEvent, getEvents } from './_store.js';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -7,6 +7,16 @@ export default async function handler(req, res) {
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
+  }
+
+  // Handle Log Retrieval directly from the same warm telemetry instance
+  if (req.method === 'GET' && (req.query.action === 'get_logs' || (!req.query.step && !req.query.event && !req.query.action))) {
+    const events = getEvents();
+    return res.status(200).json({
+      status: 'ok',
+      total_recorded_events: events.length,
+      events: events.slice(0, 100)
+    });
   }
 
   const clientIp = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.headers['x-real-ip'] || req.socket.remoteAddress || '127.0.0.1';

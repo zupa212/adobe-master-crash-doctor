@@ -1295,7 +1295,8 @@
       const radarTerm = document.getElementById('radarTerminal');
 
       try {
-        const res = await fetch('/api/ota-logs');
+        let res = await fetch('/api/ota-telemetry?action=get_logs');
+        if (!res.ok) res = await fetch('/api/ota-logs');
         const data = await res.json();
         const events = data.events || [];
         if (countSpan) countSpan.textContent = events.length;
