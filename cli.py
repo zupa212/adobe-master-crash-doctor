@@ -55,6 +55,7 @@ def main():
     parser.add_argument("--versions", action="store_true", help="Display version analysis & rollback recommendations")
     parser.add_argument("--fix-freeze-premiere", "--anti-freeze", action="store_true", help="Fix Premiere Pro timeline freeze & GPU TDR timeout deadlock")
     parser.add_argument("--fix-runtime-installer", action="store_true", help="Fix RuntimeInstaller.dll APPCRASH (0xc0000005 Access Violation)")
+    parser.add_argument("--target-path", "--path", type=str, help="Specific target Adobe executable path (e.g. \x27D:\\Adobe Suite1\\Adobe Premiere Pro 2026\\Adobe Premiere Pro.exe\x27)")
     parser.add_argument("--check-ota", action="store_true", help="Check for Over-The-Air (OTA) updates on GitHub")
     parser.add_argument("--ota-update", action="store_true", help="Download and apply the latest OTA update directly from GitHub")
 
@@ -111,6 +112,8 @@ def main():
         print("\n[*] Executing RuntimeInstaller.DLL 0xc0000005 Repair Engine...")
         apps = diag.find_all_installations()
         exes = [a["exe_path"] for a in apps if a.get("exists") and a.get("exe_path")]
+        if args.target_path and os.path.isfile(args.target_path) and args.target_path not in exes:
+            exes.append(args.target_path)
         res = u_repair.fix_runtime_installer_crash(exes)
         logger.success("RuntimeInstaller.DLL repair protocol complete!")
         return

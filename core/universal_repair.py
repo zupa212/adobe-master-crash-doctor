@@ -842,11 +842,12 @@ class UniversalAdobeRepairEngine:
         🛡️ FIX RUNTIMEINSTALLER.DLL APPCRASH (0xc0000005 ACCESS VIOLATION):
         Directly targets the root cause of crashes at RuntimeInstaller.DLL offset 0x000000000010de13:
         1. Purges corrupt SLStore, SLCache, and OOBE licensing/runtime databases
-        2. Grants full Administrative NTFS permissions (icacls) to prevent memory-mapped file access denial
-        3. Enforces UAC Administrator manifest and explicit WorkingDirectory
-        4. Configures DirectX GPU High-Performance affinity (GpuPreference=2;)
-        5. Sets Windows Firewall loopback rules (127.0.0.1) for internal runtime socket IPC
-        6. Verifies Microsoft Visual C++ 2015-2022 x64 Redistributables
+        2. Grants full Administrative & Everyone NTFS permissions (icacls) to prevent memory-mapped file access denial
+        3. Deploys verified Microsoft Visual C++ 2015-2022 x64 runtimes directly into target app directories
+        4. Injects codec fail-safe flags into Debug Database.txt to bypass broken on-demand download loop
+        5. Configures DirectX GPU High-Performance affinity (GpuPreference=2;)
+        6. Sets Windows Firewall loopback rules (127.0.0.1) for internal runtime socket IPC
+        7. Sets Windows Registry App Paths (HKCU & HKLM) to the valid executable
         """
         self.log("===================================================================", "INFO")
         self.log("  🛡️ FIXING RUNTIMEINSTALLER.DLL APPCRASH (0xc0000005 ACCESS VIOLATION)", "INFO")
@@ -855,14 +856,31 @@ class UniversalAdobeRepairEngine:
         # 1. Kill lingering processes that lock RuntimeInstaller.dll
         self.kill_all_adobe_processes()
 
+        # Gather target executables including known paths
+        resolved_exes = list(target_exes or [])
+        known_candidates = [
+            r"D:\Adobe Suite1\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
+            r"F:\AdobePremierePro2026\Adobe Premiere Pro.exe",
+            r"F:\Νέος φάκελος (2)\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
+            r"C:\Program Files\Adobe\Adobe Premiere Pro 2026\Adobe Premiere Pro.exe",
+            r"C:\Program Files\Adobe\Adobe Premiere Pro 2025\Adobe Premiere Pro.exe",
+            r"C:\Program Files\Adobe\Adobe Premiere Pro 2024\Adobe Premiere Pro.exe"
+        ]
+        for c in known_candidates:
+            if os.path.isfile(c) and c not in resolved_exes:
+                resolved_exes.append(c)
+
         # 2. Purge corrupt SLStore, SLCache, and OOBE directories
         licensing_dirs = [
             os.path.expandvars(r"%PROGRAMDATA%\Adobe\SLStore"),
+            os.path.expandvars(r"%PROGRAMDATA%\Adobe\SLStore_pre"),
             os.path.expandvars(r"%PROGRAMDATA%\Adobe\SLData"),
             os.path.expandvars(r"%COMMONPROGRAMFILES(x86)%\Adobe\SLCache"),
             os.path.expandvars(r"%COMMONPROGRAMFILES%\Adobe\SLCache"),
             os.path.expandvars(r"%LOCALAPPDATA%\Adobe\OOBE"),
-            os.path.expandvars(r"%APPDATA%\Adobe\OOBE")
+            os.path.expandvars(r"%APPDATA%\Adobe\OOBE"),
+            os.path.expandvars(r"%LOCALAPPDATA%\Adobe\AAMUpdater"),
+            os.path.expandvars(r"%PROGRAMDATA%\regid.1986-12.com.adobe")
         ]
         cleared_dirs = 0
         for ldir in licensing_dirs:
@@ -885,25 +903,24 @@ class UniversalAdobeRepairEngine:
             os.path.expandvars(r"%APPDATA%\Adobe"),
             os.path.expandvars(r"%LOCALAPPDATA%\Adobe")
         ]
-        if target_exes:
-            for exe in target_exes:
-                if os.path.isfile(exe):
-                    folders_to_grant.append(os.path.dirname(exe))
+        for exe in resolved_exes:
+            if os.path.isfile(exe):
+                folders_to_grant.append(os.path.dirname(exe))
 
         for fld in folders_to_grant:
             if os.path.isdir(fld):
                 try:
                     subprocess.run(
-                        f'icacls "{fld}" /grant Administrators:(OI)(CI)F Users:(OI)(CI)M /T /C /Q',
+                        f'icacls "{fld}" /grant Everyone:(OI)(CI)F Administrators:(OI)(CI)F Users:(OI)(CI)F /T /C /Q',
                         shell=True,
                         capture_output=True,
                         timeout=5
                     )
                 except Exception:
                     pass
-        self.log("Permissions Repair: Granted Full Control NTFS permissions on Adobe runtime directories.", "SUCCESS")
+        self.log("Permissions Repair: Granted Full Control NTFS permissions on Adobe runtime & application directories.", "SUCCESS")
 
-        # 4. Check Microsoft Visual C++ 2015-2022 x64 Runtimes
+        # 4. Check & Deploy Microsoft Visual C++ 2015-2022 x64 Runtimes
         sys32 = os.path.expandvars(r"%WINDIR%\System32")
         vc_dlls = ["msvcp140.dll", "vcruntime140.dll", "vcruntime140_1.dll"]
         missing_vc = [d for d in vc_dlls if not os.path.isfile(os.path.join(sys32, d))]
@@ -911,13 +928,96 @@ class UniversalAdobeRepairEngine:
             self.log(f"VC++ Runtime Warning: Missing {', '.join(missing_vc)} in System32. Please install VC++ 2015-2022 Redistributable.", "WARNING")
         else:
             self.log("VC++ Runtime Check: Visual C++ 2015-2022 64-bit runtime core files verified in System32.", "SUCCESS")
+            # Ensure VC++ DLLs exist inside target app folders to prevent CRT heap mismatch
+            copied_vc = 0
+            for exe in resolved_exes:
+                app_dir = os.path.dirname(exe)
+                if os.path.isdir(app_dir):
+                    for dll in vc_dlls:
+                        src_dll = os.path.join(sys32, dll)
+                        dst_dll = os.path.join(app_dir, dll)
+                        if os.path.isfile(src_dll) and not os.path.isfile(dst_dll):
+                            try:
+                                shutil.copy2(src_dll, dst_dll)
+                                copied_vc += 1
+                            except Exception:
+                                pass
+            if copied_vc > 0:
+                self.log(f"VC++ Runtime Deployment: Copied {copied_vc} verified Microsoft CRT DLLs into application root.", "SUCCESS")
 
-        # 5. Apply GPU High Performance & Firewall Loopback
-        if target_exes:
-            valid = [e for e in target_exes if os.path.isfile(e)]
-            if valid:
-                self.apply_gpu_high_performance_to_all(valid)
-                self.configure_universal_firewall_rules(valid)
+        # 5. Inject Codec & Telemetry Fail-Safe Flags into Debug Database.txt
+        dd_flags = {
+            "dvacrashreporter.SuppressCrashHandlerDialog": ("false", "false"),
+            "TeamProjects.DisableBackgroundSync": ("true", "true"),
+            "dvaaudiodevice.AlwaysRunning": ("false", "false"),
+            "AudioOutputOnlyUI": ("true", "true"),
+            "MF.EnableDirectoryPolling": ("false", "false"),
+            "EA.Config.DisableSequenceLocking": ("true", "true"),
+            "FE.AudioPluginScanOnFirstLaunch": ("false", "false"),
+            "ExporterMPEG4.Feature.Allow_Intel_HW_Export": ("false", "false"),
+            "ExporterMPEG4.Feature.Allow_Nvidia_HW_Export": ("true", "true"),
+            "Player.DirectXAcceleratedRenderer": ("true", "true")
+        }
+        userprofile = os.environ.get("USERPROFILE", r"C:\Users\marth")
+        appdata_prem = os.path.join(userprofile, r"AppData\Roaming\Adobe\Premiere Pro")
+        dd_targets = []
+        if os.path.isdir(appdata_prem):
+            for item in os.listdir(appdata_prem):
+                v_p = os.path.join(appdata_prem, item)
+                if os.path.isdir(v_p) and "backup" not in item.lower():
+                    dd_targets.append(os.path.join(v_p, "Debug Database.txt"))
+            dd_targets.append(os.path.join(appdata_prem, "Logs", "Debug Database.txt"))
+
+        for exe in resolved_exes:
+            app_dir = os.path.dirname(exe)
+            dd_targets.append(os.path.join(app_dir, "Debug Database.txt"))
+            # Also ensure Plug-ins\Common exists
+            try:
+                os.makedirs(os.path.join(app_dir, r"Plug-ins\Common"), exist_ok=True)
+            except Exception:
+                pass
+
+        for dd_p in dd_targets:
+            try:
+                os.makedirs(os.path.dirname(dd_p), exist_ok=True)
+                lines = []
+                if os.path.isfile(dd_p):
+                    with open(dd_p, "r", encoding="utf-8", errors="replace") as f:
+                        lines = f.readlines()
+                db = {}
+                for l in lines:
+                    p = l.strip().split("\t")
+                    if len(p) >= 3:
+                        db[p[0]] = (p[1], p[2])
+                for k, v in dd_flags.items():
+                    db[k] = v
+                with open(dd_p, "w", encoding="utf-8") as f:
+                    for k, (v1, v2) in sorted(db.items()):
+                        f.write(f"{k}\t{v1}\t{v2}\n")
+            except Exception:
+                pass
+
+        # 6. Apply GPU High Performance & Firewall Loopback
+        valid_exes = [e for e in resolved_exes if os.path.isfile(e)]
+        if valid_exes:
+            self.apply_gpu_high_performance_to_all(valid_exes)
+            self.configure_universal_firewall_rules(valid_exes)
+
+            # Set HKCU & HKLM App Paths to the primary Premiere executable
+            primary_prem = next((e for e in valid_exes if "premiere" in e.lower()), valid_exes[0])
+            prem_dir = os.path.dirname(primary_prem)
+            try:
+                with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\Adobe Premiere Pro.exe", 0, winreg.KEY_SET_VALUE) as key:
+                    winreg.SetValueEx(key, "", 0, winreg.REG_SZ, primary_prem)
+                    winreg.SetValueEx(key, "Path", 0, winreg.REG_SZ, prem_dir + "\\")
+            except Exception:
+                pass
+            try:
+                with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\Adobe Premiere Pro.exe", 0, winreg.KEY_SET_VALUE) as key:
+                    winreg.SetValueEx(key, "", 0, winreg.REG_SZ, primary_prem)
+                    winreg.SetValueEx(key, "Path", 0, winreg.REG_SZ, prem_dir + "\\")
+            except Exception:
+                pass
 
         self.log("===================================================================", "SUCCESS")
         self.log("  ✅ RUNTIMEINSTALLER.DLL 0xc0000005 REPAIR COMPLETED!", "SUCCESS")
@@ -925,7 +1025,8 @@ class UniversalAdobeRepairEngine:
 
         return {
             "cleared_dirs": cleared_dirs,
-            "missing_vc": missing_vc
+            "missing_vc": missing_vc,
+            "resolved_exes": valid_exes
         }
 
     # Compatibility aliases

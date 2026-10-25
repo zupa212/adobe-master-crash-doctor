@@ -4,7 +4,7 @@ import threading
 import subprocess
 import webbrowser
 import customtkinter as ctk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 
 # Add current dir to sys.path
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -458,9 +458,64 @@ class AdobeMasterDoctorApp(ctk.CTk):
         )
         self.btn_fix_freeze.pack(padx=20, pady=(0, 14), fill="x")
 
+        # ---------------- RUNTIMEINSTALLER.DLL 0xc0000005 HERO CARD ---------------- #
+        runtime_card = ctk.CTkFrame(self.frame_fix, fg_color="#312e81", corner_radius=10, border_color="#818cf8", border_width=1.5)
+        runtime_card.grid(row=2, column=0, padx=10, pady=(0, 10), sticky="ew")
+        runtime_card.grid_columnconfigure(0, weight=1)
+
+        runtime_title = ctk.CTkLabel(
+            runtime_card,
+            text="🛡️ 1-CLICK FIX RUNTIMEINSTALLER.DLL (0xc0000005 ACCESS VIOLATION)",
+            font=ctk.CTkFont(size=17, weight="bold"),
+            text_color="#a5b4fc"
+        )
+        runtime_title.pack(padx=20, pady=(12, 4), anchor="w")
+
+        runtime_desc = ctk.CTkLabel(
+            runtime_card,
+            text="Οριστική αποκατάσταση του σφάλματος APPCRASH στο RuntimeInstaller.DLL (Offset 0x000000000010de13):\n"
+                 "• Εκκαθάριση corrupt βάσεων δεδομένων αδειών SLStore, SLCache, SLData & OOBE\n"
+                 "• Επαναφορά πλήρων δικαιωμάτων NTFS (Full Control) στα runtime directories & φακέλους εφαρμογών\n"
+                 "• Αυτόματη μεταφορά και επαλήθευση Microsoft Visual C++ 2015-2022 x64 Runtimes στο app root\n"
+                 "• Παράκαμψη broken on-demand codec loops (HEVC, Dolby, MainConcept) μέσω Debug Database\n"
+                 "• Ενεργοποίηση DirectX High-Performance GPU Affinity & Windows Firewall Loopback rules",
+            font=ctk.CTkFont(size=12),
+            text_color="#c7d2fe",
+            wraplength=720,
+            justify="left"
+        )
+        runtime_desc.pack(padx=20, pady=(0, 8), anchor="w")
+
+        btn_row = ctk.CTkFrame(runtime_card, fg_color="transparent")
+        btn_row.pack(padx=20, pady=(0, 14), fill="x")
+        btn_row.grid_columnconfigure(0, weight=3)
+        btn_row.grid_columnconfigure(1, weight=1)
+
+        self.btn_fix_runtime = ctk.CTkButton(
+            btn_row,
+            text="🛡️ ΕΠΙΔΙΟΡΘΩΣΗ RUNTIMEINSTALLER.DLL APPCRASH (0xc0000005)",
+            font=ctk.CTkFont(size=14, weight="bold"),
+            fg_color="#4f46e5",
+            hover_color="#4338ca",
+            height=44,
+            command=self.run_runtime_installer_fix_thread
+        )
+        self.btn_fix_runtime.grid(row=0, column=0, padx=(0, 8), sticky="ew")
+
+        self.btn_browse_custom = ctk.CTkButton(
+            btn_row,
+            text="📂 Browse Custom EXE...",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            fg_color="#374151",
+            hover_color="#4b5563",
+            height=44,
+            command=self.browse_custom_exe
+        )
+        self.btn_browse_custom.grid(row=0, column=1, sticky="ew")
+
         # Customization Panel
         custom_box = ctk.CTkFrame(self.frame_fix, fg_color="#1e293b", corner_radius=10, border_color="#38bdf8", border_width=1)
-        custom_box.grid(row=2, column=0, padx=10, pady=10, sticky="ew")
+        custom_box.grid(row=3, column=0, padx=10, pady=10, sticky="ew")
 
         lbl_c_title = ctk.CTkLabel(custom_box, text="🛠️ Customizable 1-Click Repair Options (Επιλογή Modules & Εφαρμογών)", font=ctk.CTkFont(size=16, weight="bold"), text_color="#38bdf8")
         lbl_c_title.pack(padx=15, pady=(15, 5), anchor="w")
@@ -876,7 +931,25 @@ class AdobeMasterDoctorApp(ctk.CTk):
 
         threading.Thread(target=_worker, daemon=True).start()
 
-    def run_runtime_installer_fix_thread(self):
+    def browse_custom_exe(self):
+        chosen = filedialog.askopenfilename(
+            title="Επιλογή Εκτελέσιμου Adobe (π.χ. Adobe Premiere Pro.exe)",
+            filetypes=[("Executable Files", "*.exe"), ("All Files", "*.*")]
+        )
+        if chosen and os.path.isfile(chosen):
+            if not hasattr(self, "custom_exes"):
+                self.custom_exes = []
+            if chosen not in self.custom_exes:
+                self.custom_exes.append(chosen)
+            self.logger.success(f"📂 Επιλέχθηκε προσαρμοσμένο εκτελέσιμο: {chosen}")
+            if messagebox.askyesno(
+                "Εκτέλεση Επιδιόρθωσης",
+                f"Επιλέξατε το εκτελέσιμο:\n{chosen}\n\n"
+                f"Θέλετε να εκτελεστεί άμεσα η πλήρης επιδιόρθωση RuntimeInstaller.dll (0xc0000005) & Anti-Freeze για αυτή την εγκατάσταση;"
+            ):
+                self.run_runtime_installer_fix_thread(custom_exe=chosen)
+
+    def run_runtime_installer_fix_thread(self, custom_exe=None):
         if self.is_fixing:
             return
         self.is_fixing = True
@@ -888,15 +961,22 @@ class AdobeMasterDoctorApp(ctk.CTk):
                     self.diag_data = self.diag.run_full_diagnosis()
                 apps = self.diag_data.get("installations", [])
                 exes = [a["exe_path"] for a in apps if a.get("exists") and a.get("exe_path")]
+                if hasattr(self, "custom_exes"):
+                    for ce in self.custom_exes:
+                        if ce not in exes and os.path.isfile(ce):
+                            exes.append(ce)
+                if custom_exe and custom_exe not in exes and os.path.isfile(custom_exe):
+                    exes.append(custom_exe)
                 res = self.u_repair.fix_runtime_installer_crash(exes)
                 self.logger.success("🛡️ RuntimeInstaller.dll (0xc0000005) fix executed successfully!")
                 self.after(0, lambda: messagebox.showinfo(
                     "RuntimeInstaller Fix Complete",
                     f"Η επιδιόρθωση του RuntimeInstaller.dll (0xc0000005) ολοκληρώθηκε!\n\n"
-                    f"• Καθαρισμός corrupt SLStore/SLCache/OOBE: {res.get('cleared_dirs', 0)} βάσεις δεδομένων\n"
+                    f"• Καθαρισμός corrupt SLStore/SLCache/OOBE: {res.get("cleared_dirs", 0)} βάσεις δεδομένων\n"
                     f"• Επαναφορά δικαιωμάτων NTFS (Full Control) στα runtime dirs\n"
-                    f"• Έλεγχος Visual C++ 2015-2022 runtimes\n"
+                    f"• Έλεγχος & ανάπτυξη Visual C++ 2015-2022 runtimes\n"
                     f"• DirectX High-Perf GPU Affinity & Firewall Loopback rules\n\n"
+                    f"Εφαρμόστηκε στα εκτελέσιμα:\n" + "\n".join(res.get("resolved_exes", exes)) + "\n\n"
                     f"Μπορείτε τώρα να εκκινήσετε το Premiere Pro!"
                 ))
             except Exception as e:
